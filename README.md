@@ -1,4 +1,4 @@
-# Seat Planner 🥂
+# Event Planner 🥂
 
 A friendly seating-chart planner for weddings and events.
 
@@ -7,6 +7,6 @@ A friendly seating-chart planner for weddings and events.
 - Menus, empty seats, versions, print/PDF
 - Everything saves automatically in your browser — your events are yours
 
-**Try it:** https://teodorab16.github.io/seat-planner/
+**Try it:** https://teodorab16.github.io/event-planner/
 
 © Teodora Cristea · All rights reserved
