@@ -2355,7 +2355,7 @@ function exportList() {
 }
 
 // ================= Zoom (canvas only) =================
-let zoom = parseFloat(localStorage.getItem("seatmap_zoom")) || 1;
+let zoom = parseFloat(localStorage.getItem("seatmap_zoom")) || 0.7;
 function setZoom(z, focalX, focalY) {
   z = Math.min(2, Math.max(0.4, Math.round(z * 20) / 20));
   const wrap = document.querySelector(".board-wrap");
