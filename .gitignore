@@ -1,0 +1,4 @@
+# personal data stays local
+aranjament-mese.json
+*.local.json
+.DS_Store

@@ -60,6 +60,17 @@
     top: 0;
     z-index: 100;
   }
+  .ic { width: 15px; height: 15px; vertical-align: -2px; flex: 0 0 auto; }
+  .logo .ic { width: 17px; height: 17px; color: var(--accent); }
+  .menu-badge .ic { width: 12px; height: 12px; }
+  .mi-std { color: var(--faint); }
+  .mi-veg { color: var(--green); }
+  .mi-fish { color: #5a8fb8; }
+  .mi-alg { color: var(--red); }
+  .rule-row .ic { width: 12px; height: 12px; }
+  .t-icon .ic { width: 26px; height: 26px; color: var(--accent); }
+  .rt-ic .ic { width: 16px; height: 16px; color: var(--muted); }
+  .r-alert .ic { width: 13px; height: 13px; }
   .logo {
     width: 32px; height: 32px; border-radius: 50%;
     background: var(--accent-soft);
@@ -651,6 +662,19 @@
   .zoom-ctl button:hover { background: var(--olive-soft); color: var(--text); }
   .zoom-ctl .pct { width: auto; padding: 0 8px; font-size: 12px; font-weight: 800; border-radius: 99px; }
 
+  /* wizard */
+  .wiz-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 18px; }
+  .wiz-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); transition: background .2s; }
+  .wiz-dots span.on { background: var(--accent); }
+  .tpl-card.sel { border-color: var(--accent); background: var(--accent-soft); }
+  .wiz-count { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 700; }
+  .modal select {
+    border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px;
+    font-size: 13px; font-family: inherit; background: var(--surface);
+  }
+  .wiz-skip { font-size: 12px; color: var(--faint); text-align: center; margin-top: 14px; cursor: pointer; text-decoration: underline; }
+  .wiz-skip:hover { color: var(--muted); }
+
   /* credit */
   .credit {
     position: fixed;
@@ -687,8 +711,9 @@
 <body>
 
 <div class="topbar">
-  <div class="logo">🥂</div>
+  <div class="logo"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22h8"/><path d="M7 10h10"/><path d="M12 15v7"/><path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z"/></svg></div>
   <select class="proj-select" id="projSelect" onchange="switchProject(this.value)"></select>
+  <button class="btn" onclick="newEvent()" title="Start a new event"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> New event</button>
   <span class="sync-pill" id="syncPill"><span class="dot"></span><span id="syncText">local</span></span>
   <span class="spacer"></span>
   <button class="btn ghost" onclick="toggleDrawer()">
@@ -705,24 +730,24 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
     </button>
     <div class="dropdown" id="mainMenu">
-      <button onclick="openTemplates()">🏛&nbsp; Start from a template</button>
-      <button onclick="renameProject()">✏️&nbsp; Rename event</button>
+      <button onclick="openTemplates()"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="9" height="7" rx="1"/><rect x="16" y="14" width="5" height="7" rx="1"/></svg> Start from a template</button>
+      <button onclick="renameProject()"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Rename event</button>
       <hr>
-      <button onclick="saveFile()">💾&nbsp; Download a backup</button>
-      <button onclick="document.getElementById('loadInput').click()">📂&nbsp; Open a backup</button>
-      <button onclick="exportList()">📋&nbsp; Copy list as text</button>
-      <button onclick="printView()">🖨&nbsp; Print / PDF</button>
+      <button onclick="saveFile()"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download a backup</button>
+      <button onclick="document.getElementById('loadInput').click()"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg> Open a backup</button>
+      <button onclick="exportList()"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg> Copy list as text</button>
+      <button onclick="printView()"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print / PDF</button>
       <hr>
-      <button onclick="openSettings()">☁️&nbsp; Save online (any computer)</button>
+      <button onclick="openSettings()"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Save online (any computer)</button>
       <hr>
-      <button class="danger" onclick="deleteProject()">🗑&nbsp; Delete event</button>
+      <button class="danger" onclick="deleteProject()"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Delete event</button>
     </div>
   </div>
   <input type="file" id="loadInput" accept="application/json,.json" style="display:none" onchange="loadFile(this)">
 </div>
 
 <button class="roster-tab" onclick="toggleRoster()" title="Guest list">
-  <span class="rt-ic">👥</span>
+  <span class="rt-ic"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
   <span class="rt-txt">Guests</span>
   <span class="rt-badge hidden" id="rosterTabBadge"></span>
   <span class="rt-chev">›</span>
@@ -758,40 +783,102 @@
 </div>
 
 <div class="move-banner" id="moveBanner">
-  <span>Moving <b id="moveName"></b> — click where they should sit 💫</span>
+  <span>Moving <b id="moveName"></b> — click where they should sit</span>
   <button onclick="cancelPick()">Cancel (Esc)</button>
 </div>
 
 <!-- Onboarding / templates -->
 <div class="overlay" id="tplOverlay">
   <div class="modal">
-    <h2>Let’s set up the room ✨</h2>
+    <h2>Let’s set up the room</h2>
     <div class="sub">Pick a starting point — you can move, add or change anything afterwards.</div>
     <div class="tpl-grid">
       <div class="tpl-card" onclick="applyTemplate('sample')">
-        <div class="t-icon">🪄</div>
+        <div class="t-icon"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.29 1.29L3 12l5.8 1.9a2 2 0 0 1 1.29 1.29L12 21l1.9-5.8a2 2 0 0 1 1.29-1.29L21 12l-5.8-1.9a2 2 0 0 1-1.29-1.29Z"/></svg></div>
         <div class="t-name">Example with guests</div>
         <div class="t-desc">A small filled-in sample so you can see how everything works. Generic names — delete them anytime.</div>
       </div>
       <div class="tpl-card" onclick="applyTemplate('classic')">
-        <div class="t-icon">💍</div>
+        <div class="t-icon"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg></div>
         <div class="t-name">Classic wedding hall</div>
         <div class="t-desc">Central dance floor, DJ, bar and 10 round tables of 8. A typical starting point for weddings.</div>
       </div>
       <div class="tpl-card" onclick="applyTemplate('banquet')">
-        <div class="t-icon">🍽️</div>
+        <div class="t-icon"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></div>
         <div class="t-name">Banquet / corporate</div>
         <div class="t-desc">Stage up front, 8 rectangular tables in two columns. For conferences, galas, company parties.</div>
       </div>
       <div class="tpl-card" onclick="applyTemplate('blank')">
-        <div class="t-icon">✏️</div>
+        <div class="t-icon"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></div>
         <div class="t-name">Blank canvas</div>
         <div class="t-desc">Start from scratch: add your own tables and zones to match your venue.</div>
       </div>
       <div class="tpl-card" onclick="closeTemplates()">
-        <div class="t-icon">↩️</div>
+        <div class="t-icon"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg></div>
         <div class="t-name">Not now</div>
         <div class="t-desc">Close this window without changing anything.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New event wizard -->
+<div class="overlay" id="wizOverlay">
+  <div class="modal">
+    <div class="wiz-dots"><span id="wd1" class="on"></span><span id="wd2"></span><span id="wd3"></span></div>
+
+    <div class="wiz-step" id="wizStep1">
+      <h2>Let’s create your event</h2>
+      <div class="sub">What should we call it?</div>
+      <input type="text" id="wizName" placeholder="e.g. Maria & Andrei’s wedding" onkeydown="if(event.key==='Enter')wizGo(2)">
+      <div class="row">
+        <button class="btn" onclick="closeWizard()">Not now</button>
+        <button class="btn primary" onclick="wizGo(2)">Next →</button>
+      </div>
+      <div class="wiz-skip" onclick="closeWizard(); openTemplates();">…or start from a template / blank canvas</div>
+    </div>
+
+    <div class="wiz-step" id="wizStep2" style="display:none">
+      <h2>Who’s coming?</h2>
+      <div class="sub">Paste your guest list — one name per line. You can skip this and add people later.</div>
+      <textarea id="wizGuests" rows="10" placeholder="Anna Smith&#10;Ben Carter&#10;Chloe Park&#10;…" oninput="wizCountUpdate()"></textarea>
+      <div class="wiz-count" id="wizCount">0 guests</div>
+      <div class="row">
+        <button class="btn" onclick="wizGo(1)">← Back</button>
+        <button class="btn primary" onclick="wizGo(3)">Next →</button>
+      </div>
+    </div>
+
+    <div class="wiz-step" id="wizStep3" style="display:none">
+      <h2>What tables does your venue have?</h2>
+      <div class="sub" id="wizSummary"></div>
+      <div class="tpl-grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="tpl-card sel" id="wt_round" onclick="wizSetType('round')">
+          <div class="t-icon"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg></div>
+          <div class="t-name">Round</div>
+          <div class="t-desc">Classic banquet rounds.</div>
+        </div>
+        <div class="tpl-card" id="wt_long" onclick="wizSetType('long')">
+          <div class="t-icon"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="2"/></svg></div>
+          <div class="t-name">Long</div>
+          <div class="t-desc">Rectangular banquet tables.</div>
+        </div>
+        <div class="tpl-card" id="wt_mix" onclick="wizSetType('mix')">
+          <div class="t-icon"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="13" r="5"/><rect x="14" y="9" width="8" height="8" rx="2"/></svg></div>
+          <div class="t-name">A mix</div>
+          <div class="t-desc">Alternating round and long.</div>
+        </div>
+      </div>
+      <label>Seats per table</label>
+      <select id="wizSeats" onchange="wizCountUpdate()">
+        <option value="6">6</option>
+        <option value="8" selected>8</option>
+        <option value="10">10</option>
+        <option value="12">12</option>
+      </select>
+      <div class="row">
+        <button class="btn" onclick="wizGo(2)">← Back</button>
+        <button class="btn primary" onclick="wizGenerate()"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.29 1.29L3 12l5.8 1.9a2 2 0 0 1 1.29 1.29L12 21l1.9-5.8a2 2 0 0 1 1.29-1.29L21 12l-5.8-1.9a2 2 0 0 1-1.29-1.29Z"/></svg> Generate my plan</button>
       </div>
     </div>
   </div>
@@ -819,7 +906,7 @@ create policy "anon full access" on events for all to anon using (true) with che
     <div class="row">
       <button class="btn" onclick="disconnectCloud()">Turn off</button>
       <button class="btn" onclick="closeSettings()">Cancel</button>
-      <button class="btn primary" onclick="connectCloud()">Turn on ✨</button>
+      <button class="btn primary" onclick="connectCloud()">Turn on</button>
     </div>
   </div>
 </div>
@@ -1033,7 +1120,11 @@ function applyTemplate(kind) {
 function closeTemplatesOnly(){ document.getElementById("tplOverlay").classList.remove("show"); }
 
 // ================= Menus dictionary =================
-const MENU_ICON = { veg: "🌱", vegfish: "🐟", allergy: "⚠️" };
+const ICONS = {"wine": "<path d=\"M8 22h8\"/><path d=\"M7 10h10\"/><path d=\"M12 15v7\"/><path d=\"M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z\"/>", "plus": "<path d=\"M5 12h14\"/><path d=\"M12 5v14\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/><line x1=\"10\" y1=\"11\" x2=\"10\" y2=\"17\"/><line x1=\"14\" y1=\"11\" x2=\"14\" y2=\"17\"/>", "pencil": "<path d=\"M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z\"/>", "download": "<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><polyline points=\"7 10 12 15 17 10\"/><line x1=\"12\" y1=\"15\" x2=\"12\" y2=\"3\"/>", "folder": "<path d=\"m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2\"/>", "clipboard": "<rect x=\"8\" y=\"2\" width=\"8\" height=\"4\" rx=\"1\"/><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\"/>", "printer": "<polyline points=\"6 9 6 2 18 2 18 9\"/><path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\"/><rect x=\"6\" y=\"14\" width=\"12\" height=\"8\"/>", "cloud": "<path d=\"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z\"/>", "layout": "<rect x=\"3\" y=\"3\" width=\"18\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"9\" height=\"7\" rx=\"1\"/><rect x=\"16\" y=\"14\" width=\"5\" height=\"7\" rx=\"1\"/>", "leaf": "<path d=\"M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z\"/><path d=\"M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12\"/>", "fish": "<path d=\"M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.47-3.44 6-7 6s-7.56-2.53-8.5-6Z\"/><path d=\"M18 12v.5\"/><path d=\"M16 17.93a9.77 9.77 0 0 1 0-11.86\"/><path d=\"M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33\"/>", "alert": "<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/>", "utensils": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/><path d=\"M7 2v20\"/><path d=\"M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/>", "heart": "<path d=\"M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z\"/>", "zap": "<polygon points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"/>", "sparkles": "<path d=\"m12 3-1.9 5.8a2 2 0 0 1-1.29 1.29L3 12l5.8 1.9a2 2 0 0 1 1.29 1.29L12 21l1.9-5.8a2 2 0 0 1 1.29-1.29L21 12l-5.8-1.9a2 2 0 0 1-1.29-1.29Z\"/>", "gem": "<path d=\"M6 3h12l4 6-10 13L2 9Z\"/><path d=\"M11 3 8 9l4 13 4-13-3-6\"/><path d=\"M2 9h20\"/>", "back": "<polyline points=\"9 14 4 9 9 4\"/><path d=\"M20 20v-7a4 4 0 0 0-4-4H4\"/>", "users": "<path d=\"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M23 21v-2a4 4 0 0 0-3-3.87\"/><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>", "circle": "<circle cx=\"12\" cy=\"12\" r=\"9\"/>", "rectw": "<rect x=\"3\" y=\"8\" width=\"18\" height=\"8\" rx=\"2\"/>", "mixshape": "<circle cx=\"7\" cy=\"13\" r=\"5\"/><rect x=\"14\" y=\"9\" width=\"8\" height=\"8\" rx=\"2\"/>"};
+function icon(name, cls) {
+  return `<svg class="ic ${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
+}
+const MENU_ICON = { veg: icon("leaf","mi-veg"), vegfish: icon("fish","mi-fish"), allergy: icon("alert","mi-alg") };
 const MENU_TITLE = { veg: "Vegetarian", vegfish: "Veg + fish", allergy: "ALLERGY" };
 const MENU_CYCLE = { undefined: "veg", veg: "vegfish", vegfish: "allergy", allergy: undefined };
 
@@ -1042,19 +1133,16 @@ function renderProjects() {
   const sel = document.getElementById("projSelect");
   sel.innerHTML = Object.entries(db.projects)
     .map(([id,p]) => `<option value="${id}" ${id===db.current?"selected":""}>${escapeHtml(p.name)}</option>`)
-    .join("") + `<option value="__new__">＋ New event…</option>`;
+    .join("");
+}
+function newEvent() {
+  const nid = newId();
+  db.projects[nid] = emptyProject("New event");
+  db.current = nid;
+  cancelPick(); resetHistory(); saveDB(); renderAll();
+  openWizard();               // guided setup: name → guests → tables → first arrangement
 }
 function switchProject(id) {
-  if (id === "__new__") {
-    const name = prompt("Event name:", "New event");
-    if (!name) { renderProjects(); return; }
-    const nid = newId();
-    db.projects[nid] = emptyProject(name.trim());
-    db.current = nid;
-    cancelPick(); resetHistory(); saveDB(); renderAll();
-    openTemplates();          // new event: offer a starting template
-    return;
-  }
   db.current = id;
   cancelPick(); resetHistory(); saveDB(); renderAll();
 }
@@ -1114,7 +1202,7 @@ function deleteSnapshot(id) {
 function renderSnapshots() {
   const list = document.getElementById("snapList");
   const snaps = P().snapshots || [];
-  if (!snaps.length) { list.innerHTML = `<div class="empty-note">No versions yet.<br>Save the current one above. 💛</div>`; return; }
+  if (!snaps.length) { list.innerHTML = `<div class="empty-note">No versions yet.<br>Save the current one above.</div>`; return; }
   list.innerHTML = snaps.map(s => {
     const d = new Date(s.at);
     const when = d.toLocaleDateString("en-GB", {day:"numeric", month:"short"}) + " · " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
@@ -1128,6 +1216,84 @@ function renderSnapshots() {
       </div>
     </div>`;
   }).join("");
+}
+
+// ================= New-event wizard =================
+let wizType = "round";
+function openWizard() {
+  wizType = "round";
+  document.getElementById("wizName").value = "";
+  document.getElementById("wizGuests").value = "";
+  wizSetType("round");
+  wizGo(1);
+  document.getElementById("wizOverlay").classList.add("show");
+  setTimeout(() => document.getElementById("wizName").focus(), 150);
+}
+function closeWizard() {
+  document.getElementById("wizOverlay").classList.remove("show");
+  db.onboarded = true; saveDB();
+}
+function wizGo(step) {
+  [1,2,3].forEach(i => {
+    document.getElementById("wizStep" + i).style.display = i === step ? "" : "none";
+    document.getElementById("wd" + i).classList.toggle("on", i <= step);
+  });
+  if (step === 2) setTimeout(() => document.getElementById("wizGuests").focus(), 100);
+  if (step >= 2) wizCountUpdate();
+}
+function wizGuestList() {
+  const seen = new Set();
+  return document.getElementById("wizGuests").value.split("\n")
+    .map(x => x.trim()).filter(Boolean)
+    .filter(n => { const k = normName(n); if (seen.has(k)) return false; seen.add(k); return true; });
+}
+function wizCountUpdate() {
+  const n = wizGuestList().length;
+  document.getElementById("wizCount").textContent = n + " guest" + (n === 1 ? "" : "s");
+  const seats = parseInt(document.getElementById("wizSeats").value) || 8;
+  const N = n ? Math.ceil(n / seats) : 4;
+  document.getElementById("wizSummary").textContent = n
+    ? `${n} guests → ${N} table${N > 1 ? "s" : ""} of ${seats}. We’ll deal everyone in randomly — you rearrange from there.`
+    : `No list yet — we’ll set up ${N} empty tables of ${seats} to start with.`;
+}
+function wizSetType(t) {
+  wizType = t;
+  ["round","long","mix"].forEach(k => document.getElementById("wt_" + k).classList.toggle("sel", k === t));
+}
+function wizGenerate() {
+  const p = P();
+  const name = document.getElementById("wizName").value.trim();
+  if (name) p.name = name;
+  const names = wizGuestList();
+  const seats = parseInt(document.getElementById("wizSeats").value) || 8;
+  const N = names.length ? Math.ceil(names.length / seats) : 4;
+  p.master = [...names];
+  // shuffle for the first random deal
+  const pool = [...names];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  p.zones = [
+    { _id: "z1", label: "DJ",          x: 140,  y: 50, w: 150, h: 60,  shape: "rect" },
+    { _id: "z2", label: "Dance floor", x: 660,  y: 20, w: 380, h: 250, shape: "ellipse" },
+    { _id: "z3", label: "Bar",         x: 1400, y: 50, w: 160, h: 60,  shape: "rect" },
+  ];
+  p.tables = []; p.nextUid = 0;
+  const cols = 3, cellW = 510, cellH = 500, x0 = 130, y0 = 340;
+  for (let i = 0; i < N; i++) {
+    const shape = wizType === "round" ? "round" : wizType === "long" ? "h" : (i % 2 ? "h" : "round");
+    p.tables.push({
+      _id: nextUid(), num: String(i + 1), cap: seats,
+      x: x0 + (i % cols) * cellW, y: y0 + Math.floor(i / cols) * cellH,
+      shape, guests: pool.splice(0, seats)
+    });
+  }
+  db.onboarded = true;
+  document.getElementById("wizOverlay").classList.remove("show");
+  clearSelection();
+  renderAll();
+  centerBoard();
 }
 
 // ================= Menus / dropdown =================
@@ -1239,7 +1405,7 @@ function render() {
         </div>`
       : `<div class="guest" draggable="true" data-id="${t._id}" data-idx="${i}"${style}>
         <span class="gname" data-id="${t._id}" data-idx="${i}" title="${escapeHtml(g)}">${escapeHtml(g)}</span>
-        <span class="menu-badge ${p.menus[normName(g)] || ""}" data-name="${escapeHtml(g)}" title="${MENU_TITLE[p.menus[normName(g)]] || "Standard — click to change menu"}">${MENU_ICON[p.menus[normName(g)]] || "🍽"}</span>
+        <span class="menu-badge ${p.menus[normName(g)] || ""}" data-name="${escapeHtml(g)}" title="${MENU_TITLE[p.menus[normName(g)]] || "Standard — click to change menu"}">${MENU_ICON[p.menus[normName(g)]] || icon("utensils","mi-std")}</span>
         <span class="x" data-id="${t._id}" data-idx="${i}">×</span>
       </div>`;
 
@@ -1275,6 +1441,16 @@ function render() {
     if (String(t._id) === String(selectedTable)) el.classList.add("sel");
     board.appendChild(el);
   }
+  // grow the canvas to fit everything (generated grids can exceed the default)
+  let needW = 1700, needH = 1300;
+  p.zones.forEach(z => { needW = Math.max(needW, z.x + z.w + 100); needH = Math.max(needH, z.y + z.h + 140); });
+  p.tables.forEach(t => {
+    const w = t.shape === "round" ? 460 : t.shape === "h" ? 460 : 260;
+    needW = Math.max(needW, t.x + w + 100);
+    needH = Math.max(needH, t.y + 480);
+  });
+  board.style.width = needW + "px";
+  board.style.height = needH + "px";
   wireEvents();
   buildToolbar();
   renderRoster();
@@ -1314,7 +1490,7 @@ function buildToolbar() {
     <input class="tb-find" placeholder="find a guest…" data-id="${t._id}" autocomplete="off">
     <button class="tb-btn" id="tbSeat" title="Add an empty seat">+ seat</button>
     <button class="tb-btn" id="tbShape" title="Shape: vertical / horizontal / round">${shapeIcon(t)}</button>
-    <button class="tb-btn tb-del" id="tbDel" title="Delete table">🗑</button>
+    <button class="tb-btn tb-del" id="tbDel" title="Delete table"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
     <div class="ac"></div>`;
   positionToolbar(bar, t);
   board.appendChild(bar);
@@ -1443,20 +1619,20 @@ function renderRoster() {
       if (!ok) broken++;
     }
     return `<div class="rule-row ${st}">
-      <span class="rule-txt">${escapeHtml(r.a)} ${r.type === "together" ? "❤" : "⚡"} ${escapeHtml(r.b)}</span>
+      <span class="rule-txt">${escapeHtml(r.a)} ${r.type === "together" ? icon("heart") : icon("zap")} ${escapeHtml(r.b)}</span>
       <span>${icon}</span>
       <span class="r-x" style="visibility:visible" onclick="removeRule(${i})" title="Remove rule">×</span></div>`;
   }).join("");
   const rulesHtml = `
     <div class="r-section">Seating rules</div>
-    ${broken ? `<div class="r-alert">⚠ ${broken} rule${broken > 1 ? "s" : ""} broken</div>` : ""}
+    ${broken ? `<div class="r-alert">${icon("alert")} ${broken} rule${broken > 1 ? "s" : ""} broken</div>` : ""}
     <div class="rule-add">
       <input list="masterDL" id="ruleA" placeholder="name">
-      <select id="ruleType"><option value="together">❤ together</option><option value="apart">⚡ apart</option></select>
+      <select id="ruleType"><option value="together">together</option><option value="apart">apart</option></select>
       <input list="masterDL" id="ruleB" placeholder="name">
       <button onclick="addRule()" title="Add rule">+</button>
     </div>
-    ${ruleRows || '<div class="r-sub">e.g. “grandma ❤ grandpa” must share a table, or “uncle ⚡ ex-wife” must not.</div>'}
+    ${ruleRows || '<div class="r-sub">e.g. grandma + grandpa must share a table; uncle + ex-wife must not.</div>'}
     <datalist id="masterDL">${p.master.map(n => `<option value="${escapeHtml(n)}">`).join("")}</datalist>`;
 
   const tb = document.getElementById("rosterTabBadge");
@@ -1473,7 +1649,7 @@ function renderRoster() {
     <input class="r-search" type="text" placeholder="search the list…" oninput="filterRoster(this.value)" value="${escapeHtml(rosterQuery)}">
     <button class="r-toggle" onclick="toggleRosterFilter()">${rosterOnlyUnassigned ? "↺ Show everyone" : "Only unseated"}</button>
     <div class="r-add"><input type="text" placeholder="+ add a person…" onkeydown="if(event.key==='Enter'){masterAdd(this.value);this.value='';}"></div>
-    <button class="r-toggle" onclick="openBulk()">📋 Paste a whole list…</button>
+    <button class="r-toggle" onclick="openBulk()">${icon("clipboard")} Paste a whole list…</button>
     <div class="r-list">${listHtml || '<div class="empty-note">Add guests here, or directly at a table.</div>'}</div>
     ${extraHtml}
     ${rulesHtml}
@@ -1993,7 +2169,7 @@ board.style.zoom = zoom;
 document.getElementById("zoomPct").textContent = Math.round(zoom * 100) + "%";
 centerBoard();
 initCloud();
-if (!db.onboarded && P().tables.length === 0 && P().zones.length === 0) openTemplates();
+if (!db.onboarded && P().tables.length === 0 && P().zones.length === 0) openWizard();
 </script>
 </body>
 </html>
