@@ -725,6 +725,20 @@
   .d-rose { color: #e7a3b2; }
   .d-olive { color: #bcb48c; }
 
+  /* sample banner */
+  .sample-banner {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: none; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 99px; box-shadow: var(--shadow-lg);
+    padding: 10px 12px 10px 20px; font-size: 13.5px; z-index: 450;
+    max-width: 92vw; flex-wrap: wrap; justify-content: center;
+  }
+  .sample-banner.show { display: flex; }
+  .sample-banner b { color: var(--accent); }
+  .sb-x { cursor: pointer; color: var(--faint); font-size: 16px; padding: 0 4px; }
+  .sb-x:hover { color: var(--text); }
+
   /* zoom control */
   .zoom-ctl {
     position: fixed;
@@ -894,6 +908,25 @@ async function bdUnlock() {
   <button onclick="setZoom(zoom + 0.1)" title="Zoom in">+</button>
 </div>
 
+<div class="sample-banner" id="sampleBanner">
+  <span>This is a <b>sample setup</b> so you can see how it works — make it yours!</span>
+  <button class="btn primary" onclick="openImport()">Paste my guest list</button>
+  <button class="btn" onclick="openWizard()">Start from scratch</button>
+  <span class="sb-x" onclick="dismissSample()" title="Keep the sample">×</span>
+</div>
+
+<div class="overlay" id="importOverlay">
+  <div class="modal">
+    <h2>Bring in your guest list</h2>
+    <div class="sub">Paste your guests — one name per line. This replaces the sample guests and deals yours onto the tables. You rearrange from there.</div>
+    <textarea id="importText" rows="12" placeholder="Anna Smith&#10;Ben Carter&#10;Chloe Park&#10;…"></textarea>
+    <div class="row">
+      <button class="btn" onclick="closeImport()">Cancel</button>
+      <button class="btn primary" onclick="applyImport()">Replace sample & seat my guests</button>
+    </div>
+  </div>
+</div>
+
 <div class="move-banner" id="moveBanner">
   <span>Moving <b id="moveName"></b> — click where they should sit</span>
   <button onclick="cancelPick()">Cancel (Esc)</button>
@@ -1056,10 +1089,30 @@ function emptyProject(name) {
   return { name, tables: [], zones: [], master: [], menus: {}, edited: [], snapshots: [], rules: [], nextUid: 0 };
 }
 
+function sampleProject(name) {
+  const p = emptyProject(name);
+  p.isSample = true;
+  p.zones = [
+    { _id: "z1", label: "Dance floor", x: 640, y: 420, w: 340, h: 340, shape: "ellipse" },
+    { _id: "z2", label: "DJ",          x: 740, y: 300, w: 140, h: 50,  shape: "rect" },
+    { _id: "z3", label: "Bar",         x: 40,  y: 1080, w: 160, h: 60, shape: "rect" },
+    { _id: "z4", label: "Entrance",    x: 1400, y: 60, w: 140, h: 44,  shape: "rect" },
+  ];
+  const T = [
+    ["Anna","Ben","Clara","David","Emma","Felix"],
+    ["Grace","Henry","Ivy","Jack","Kate","Liam"],
+    ["Mia","Noah","Olivia","Peter","Quinn","Rosa"],
+    ["Sam","Tess","Victor","Wendy"],
+  ];
+  const spots = [[150,120],[1150,120],[150,760],[1150,760]];
+  T.forEach((guests, i) => p.tables.push({ _id: ++p.nextUid, num: String(i+1), cap: 8, x: spots[i][0], y: spots[i][1], shape: "round", guests: guests.slice() }));
+  p.master = [...T.flat(), "Uma", "Xavier", "Yara", "Zack"];
+  return p;
+}
 function loadDB() {
   try { const s = localStorage.getItem(DB_KEY); if (s) return JSON.parse(s); } catch(e){}
   const id = newId();
-  return { current: id, projects: { [id]: emptyProject("My event") }, onboarded: false };
+  return { current: id, projects: { [id]: sampleProject("My event") }, onboarded: true };
 }
 
 function P() { return db.projects[db.current]; }
@@ -1437,6 +1490,41 @@ function wizGenerate() {
   centerBoard();
 }
 
+// ================= Sample banner & guest-list import =================
+function updateSampleBanner() {
+  const b = document.getElementById("sampleBanner");
+  if (b) b.classList.toggle("show", !!P().isSample);
+}
+function dismissSample() { P().isSample = false; saveDB(); updateSampleBanner(); }
+function openImport() { document.getElementById("importOverlay").classList.add("show"); setTimeout(() => document.getElementById("importText").focus(), 100); }
+function closeImport() { document.getElementById("importOverlay").classList.remove("show"); }
+function applyImport() {
+  const seen = new Set();
+  const names = document.getElementById("importText").value.split("\n")
+    .map(x => x.trim()).filter(Boolean)
+    .filter(n => { const k = normName(n); if (seen.has(k)) return false; seen.add(k); return true; });
+  if (!names.length) { alert("Paste at least one name first."); return; }
+  const p = P();
+  p.master = [...names];
+  p.menus = {}; p.edited = [];
+  const seats = 8;
+  const N = Math.ceil(names.length / seats);
+  const pool = [...names];
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  p.tables = []; p.nextUid = 0;
+  const cols = 3, cellW = 510, cellH = 500, x0 = 130, y0 = 340;
+  for (let i = 0; i < N; i++) {
+    p.tables.push({ _id: ++p.nextUid, num: String(i + 1), cap: seats,
+      x: x0 + (i % cols) * cellW, y: y0 + Math.floor(i / cols) * cellH,
+      shape: "round", guests: pool.splice(0, seats) });
+  }
+  if (!p.zones.length) p.zones = [{ _id: "z1", label: "Dance floor", x: 640, y: 40, w: 340, h: 250, shape: "ellipse" }];
+  p.isSample = false;
+  closeImport();
+  document.getElementById("importText").value = "";
+  clearSelection(); renderAll(); centerBoard(); updateSampleBanner();
+}
+
 // ================= Menus / dropdown =================
 function toggleMenu(e) {
   e.stopPropagation();
@@ -1597,7 +1685,7 @@ function render() {
   renderRoster();
   saveDB();
 }
-function renderAll() { renderProjects(); render(); }
+function renderAll() { renderProjects(); render(); updateSampleBanner(); }
 
 // ================= Selection + floating toolbar (Miro-style) =================
 let selectedTable = null;
@@ -2273,6 +2361,7 @@ document.getElementById("zoomPct").textContent = Math.round(zoom * 100) + "%";
 centerBoard();
 initCloud();
 if (!db.onboarded && P().tables.length === 0 && P().zones.length === 0) openWizard();
+updateSampleBanner();
 </script>
 </body>
 </html>
