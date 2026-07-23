@@ -1137,7 +1137,7 @@ function renderProjects() {
 }
 function newEvent() {
   const nid = newId();
-  db.projects[nid] = emptyProject("New event");
+  db.projects[nid] = emptyProject("Untitled event");
   db.current = nid;
   cancelPick(); resetHistory(); saveDB(); renderAll();
   openWizard();               // guided setup: name → guests → tables → first arrangement
