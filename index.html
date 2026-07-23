@@ -725,6 +725,17 @@
   .d-rose { color: #e7a3b2; }
   .d-olive { color: #bcb48c; }
 
+  /* tutorial modal */
+  .tut-modal { width: min(760px, 94vw); padding: 20px 20px 16px; }
+  .tut-modal video {
+    width: 100%; border-radius: 12px; display: block;
+    background: #000;
+  }
+  .tut-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .tut-head h2 { margin: 0; }
+  .tut-x { cursor: pointer; color: var(--faint); font-size: 20px; padding: 2px 8px; border-radius: 8px; }
+  .tut-x:hover { background: var(--olive-soft); color: var(--text); }
+
   /* sample banner */
   .sample-banner {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -846,6 +857,10 @@ async function bdUnlock() {
   <div class="proj-menu" id="projMenu"></div>
   <span class="sync-pill" id="syncPill"><span class="dot"></span><span id="syncText">local</span></span>
   <span class="spacer"></span>
+  <button class="btn ghost" onclick="openTutorial(true)" title="Watch the 30-second tutorial">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
+    Tutorial
+  </button>
   <button class="btn ghost" onclick="toggleDrawer()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     Versions
@@ -910,6 +925,20 @@ async function bdUnlock() {
   <button onclick="setZoom(zoom - 0.1)" title="Zoom out">−</button>
   <button class="pct" id="zoomPct" onclick="setZoom(1)" title="Reset to 100%">100%</button>
   <button onclick="setZoom(zoom + 0.1)" title="Zoom in">+</button>
+</div>
+
+<div class="overlay" id="tutOverlay">
+  <div class="modal tut-modal">
+    <div class="tut-head">
+      <h2>A quick tour</h2>
+      <span class="tut-x" onclick="closeTutorial()" title="Close">×</span>
+    </div>
+    <video id="tutVideo" src="/demo-video/demo-table-setting.mp4" controls preload="metadata"></video>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" onclick="closeTutorial()">Skip — I’ll explore myself</button>
+      <button class="btn primary" onclick="playTutorial()">▶ Play the tutorial</button>
+    </div>
+  </div>
 </div>
 
 <div class="sample-banner" id="sampleBanner">
@@ -1494,12 +1523,32 @@ function wizGenerate() {
   centerBoard();
 }
 
+// ================= Tutorial =================
+function openTutorial(manual) {
+  document.getElementById("tutOverlay").classList.add("show");
+  try { localStorage.setItem("bd_tut_seen", "1"); } catch(e) {}
+  if (manual) playTutorial();
+}
+function playTutorial() { const v = document.getElementById("tutVideo"); if (v.paused) v.play().catch(()=>{}); }
+function closeTutorial() {
+  const v = document.getElementById("tutVideo");
+  v.pause();
+  document.getElementById("tutOverlay").classList.remove("show");
+}
+function maybeOfferTutorial() {
+  let seen = null;
+  try { seen = localStorage.getItem("bd_tut_seen"); } catch(e) {}
+  const locked = document.documentElement.className.includes("locked");
+  if (!seen && !locked) openTutorial(false);
+}
+
 // ================= Sample banner & guest-list import =================
 function updateSampleBanner() {
   const b = document.getElementById("sampleBanner");
   if (b) b.classList.toggle("show", !!P().isSample);
 }
-function dismissSample() { P().isSample = false; saveDB(); updateSampleBanner(); }
+function dismissSample() { P().isSample = false; saveDB(); updateSampleBanner();
+maybeOfferTutorial(); }
 function openImport() { document.getElementById("importOverlay").classList.add("show"); setTimeout(() => document.getElementById("importText").focus(), 100); }
 function closeImport() { document.getElementById("importOverlay").classList.remove("show"); }
 function applyImport() {
@@ -1527,6 +1576,7 @@ function applyImport() {
   closeImport();
   document.getElementById("importText").value = "";
   clearSelection(); renderAll(); centerBoard(); updateSampleBanner();
+maybeOfferTutorial();
 }
 
 // ================= Menus / dropdown =================
@@ -1689,7 +1739,8 @@ function render() {
   renderRoster();
   saveDB();
 }
-function renderAll() { renderProjects(); render(); updateSampleBanner(); }
+function renderAll() { renderProjects(); render(); updateSampleBanner();
+maybeOfferTutorial(); }
 
 // ================= Selection + floating toolbar (Miro-style) =================
 let selectedTable = null;
@@ -2390,6 +2441,7 @@ centerBoard();
 initCloud();
 if (!db.onboarded && P().tables.length === 0 && P().zones.length === 0) openWizard();
 updateSampleBanner();
+maybeOfferTutorial();
 </script>
 </body>
 </html>
