@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seat Planner — arrange your event tables with love</title>
+<meta name="description" content="A friendly seating chart planner for weddings and events. Round tables, drag & drop guests, menus, seating rules, versions — saved right in your browser.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥂</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fbf2f1;
+    --surface: #fffbfa;
+    --border: #f0ded9;
+    --border-strong: #dfc3bc;
+    --text: #453d33;
+    --muted: #8d8272;
+    --faint: #b3a893;
+    --accent: #dd6480;
+    --accent-soft: #fce8ee;
+    --olive: #9a9668;
+    --olive-soft: #f2f0e3;
+    --green: #6f9b58;
+    --green-soft: #eef4e8;
+    --red: #cf5a4e;
+    --red-soft: #fbeeec;
+    --amber: #d99a2b;
+    --amber-soft: #fdf6e5;
+    --shadow: 0 1px 2px rgba(120,50,70,.05), 0 4px 14px rgba(120,50,70,.06);
+    --shadow-lg: 0 4px 8px rgba(120,50,70,.06), 0 14px 36px rgba(120,50,70,.13);
+    --r: 14px;
+    --script: "Caveat", cursive;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: Nunito, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; }
+
+  /* ============ Top bar ============ */
+  .topbar {
+    height: 56px;
+    overflow-x: auto;
+    overflow-y: visible;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent-soft);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    flex: 0 0 32px;
+  }
+  .proj-select {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b3a893' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px !important;
+    font-family: var(--script);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    padding: 4px 6px;
+    border-radius: 10px;
+    cursor: pointer;
+    max-width: 280px;
+  }
+  .proj-select:hover { background: var(--accent-soft); }
+  .sync-pill {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: var(--olive-soft);
+    white-space: nowrap;
+  }
+  .sync-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .sync-pill.cloud { background: var(--green-soft); color: var(--green); }
+  .sync-pill.cloud .dot { background: var(--green); }
+  .sync-pill.err { background: var(--red-soft); color: var(--red); }
+  .sync-pill.err .dot { background: var(--red); }
+  .spacer { flex: 1; }
+  .btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 99px;
+    padding: 8px 15px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: background .12s, border-color .12s;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .btn:hover { background: var(--olive-soft); border-color: var(--border-strong); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: #cc5271; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.ghost:hover { background: var(--olive-soft); color: var(--text); }
+  .btn svg { width: 15px; height: 15px; }
+
+  /* dropdown menu */
+  .menu-wrap { position: relative; }
+  .dropdown {
+    position: fixed; right: 12px; top: 60px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    box-shadow: var(--shadow-lg);
+    min-width: 210px;
+    padding: 6px;
+    display: none;
+    z-index: 200;
+  }
+  .dropdown.show { display: block; }
+  .dropdown button {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    border: none; background: none;
+    padding: 9px 10px;
+    font-size: 13px;
+    color: var(--text);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .dropdown button:hover { background: var(--olive-soft); }
+  .dropdown button.danger { color: var(--red); }
+  .dropdown hr { border: none; border-top: 1px solid var(--border); margin: 6px 4px; }
+  .dropdown svg { width: 15px; height: 15px; color: var(--muted); }
+
+  /* ============ Layout ============ */
+  .layout { display: flex; height: calc(100vh - 56px); }
+  .board-wrap { flex: 1; overflow: auto; position: relative; }
+  .board {
+    position: relative;
+    width: 1700px;
+    height: 1300px;
+    margin: 0 auto;
+    background-image: radial-gradient(circle, #eed3d4 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+
+  /* ============ Guests sidebar ============ */
+  .roster {
+    width: 0;
+    flex: 0 0 auto;
+    background: var(--surface);
+    border-right: 1px solid transparent;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 0;
+    opacity: 0;
+    transition: width .28s ease, padding .28s ease, opacity .22s ease, border-color .28s ease;
+  }
+  .roster.show {
+    width: 264px;
+    padding: 16px;
+    opacity: 1;
+    border-right-color: var(--border);
+  }
+  .r-inner { width: 232px; }
+
+  /* handle attached to the panel edge — always visible */
+  .roster-tab {
+    position: fixed;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    z-index: 90;
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: none;
+    border-radius: 0 14px 14px 0;
+    box-shadow: var(--shadow);
+    padding: 12px 7px;
+    cursor: pointer;
+    transition: left .28s ease, background .12s;
+    font-family: inherit;
+  }
+  .roster-tab:hover { background: var(--olive-soft); }
+  body.roster-open .roster-tab { left: 264px; }
+  .rt-ic { font-size: 15px; }
+  .rt-txt {
+    writing-mode: vertical-rl;
+    font-size: 11.5px; font-weight: 800; letter-spacing: .8px;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .rt-badge {
+    min-width: 19px; height: 19px; border-radius: 99px;
+    background: var(--red); color: #fff;
+    font-size: 10.5px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 4px;
+  }
+  .rt-badge.hidden { display: none; }
+  .rt-chev { color: var(--faint); font-size: 12px; transition: transform .28s ease; }
+  body.roster-open .rt-chev { transform: rotate(180deg); }
+  .r-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+  .r-head strong { font-size: 14px; font-weight: 600; }
+  .r-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+  .r-badge.warn { background: var(--red-soft); color: var(--red); }
+  .r-badge.ok { background: var(--green-soft); color: var(--green); }
+  .r-sub { font-size: 11.5px; color: var(--faint); margin-bottom: 12px; }
+  .r-search, .r-add input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 8px 10px;
+    font-size: 13px;
+    margin-bottom: 8px;
+    outline: none;
+    font-family: inherit;
+  }
+  .r-search:focus, .r-add input:focus { border-color: var(--accent); }
+  .r-toggle {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 9px;
+    padding: 7px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+  .r-toggle:hover { background: var(--olive-soft); }
+  .r-list { display: flex; flex-direction: column; }
+  .r-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 6px;
+    font-size: 13px;
+    border-radius: 7px;
+  }
+  .r-name { flex: 1; outline: none; overflow-wrap: anywhere; }
+  .r-name:focus { background: var(--accent-soft); border-radius: 4px; }
+  .r-edited { font-size: 9.5px; color: var(--amber); background: var(--amber-soft); border-radius: 99px; padding: 2px 7px; }
+  .r-x { color: transparent; cursor: pointer; font-size: 14px; line-height: 1; }
+  .r-item:hover .r-x { color: var(--faint); }
+  .r-x:hover { color: var(--red) !important; }
+  .r-item.on { color: var(--faint); }
+  .r-item.off { color: var(--text); font-weight: 500; background: var(--red-soft); }
+  .r-item.extra { color: var(--amber); background: var(--amber-soft); }
+  .r-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px; }
+  .r-item.on .r-dot { background: var(--green); opacity: .5; }
+  .r-item.off .r-dot { background: var(--red); }
+  .r-item.extra .r-dot { background: var(--amber); }
+  .r-section { margin: 14px 0 4px; font-size: 10.5px; text-transform: uppercase; color: var(--faint); font-weight: 700; letter-spacing: .6px; }
+
+  /* ============ Zones ============ */
+  .zone {
+    position: absolute;
+    border: 2px dashed var(--olive);
+    background: rgba(242,240,227,.55);
+    color: var(--olive);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--script);
+    font-weight: 700; font-size: 19px; letter-spacing: .5px;
+    text-align: center;
+    cursor: grab;
+    user-select: none;
+    z-index: 1;
+    border-radius: 10px;
+    transition: border-color .12s;
+  }
+  .zone:hover { border-color: var(--accent); color: var(--muted); }
+  .zone:active { cursor: grabbing; }
+  .zone.ellipse { border-radius: 50%; }
+  .zone .z-label { outline: none; padding: 4px; max-width: 88%; overflow-wrap: anywhere; }
+  .zone .z-label:focus { background: var(--surface); color: var(--text); border-radius: 5px; box-shadow: 0 0 0 2px var(--accent); text-transform: none; }
+  .zone .z-tools {
+    position: absolute; top: 8px; right: 8px;
+    display: flex; gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    box-shadow: var(--shadow);
+    opacity: 0; visibility: hidden;
+    transition: opacity .15s ease, visibility 0s linear .25s;
+  }
+  .zone:hover .z-tools, .zone .z-tools:hover {
+    opacity: 1; visibility: visible;
+    transition: opacity .15s ease;
+  }
+  .zone.ellipse .z-tools { right: auto; left: 50%; transform: translateX(-50%); }
+  .z-tools span {
+    cursor: pointer; padding: 3px 6px; border-radius: 6px;
+    font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 500;
+  }
+  .z-tools span:hover { background: var(--olive-soft); color: var(--text); }
+  .z-tools span.del:hover { color: var(--red); }
+  .zone .z-resize {
+    position: absolute; right: -5px; bottom: -5px; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--accent); cursor: nwse-resize;
+    opacity: 0; visibility: hidden;
+    transition: opacity .15s ease, visibility 0s linear .25s;
+  }
+  .zone:hover .z-resize, .zone .z-resize:hover {
+    opacity: 1; visibility: visible;
+    transition: opacity .15s ease;
+  }
+  .zone.ellipse .z-resize { right: auto; left: 50%; bottom: 6px; transform: translateX(-50%); cursor: ns-resize; }
+
+  /* ============ Tables ============ */
+  .table {
+    position: absolute;
+    width: 252px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 10px;
+    z-index: 5;
+    transition: box-shadow .15s, border-color .12s;
+  }
+  .table:hover { box-shadow: var(--shadow-lg); }
+  .table.wide { width: 452px; }
+  .table.wide .seats { grid-template-columns: repeat(4, 1fr); }
+  .table { cursor: grab; }
+  .table.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-lg); }
+  .tbar {
+    position: absolute; transform: translate(-50%, -100%);
+    display: flex; gap: 3px; align-items: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 99px;
+    box-shadow: var(--shadow-lg); padding: 5px 7px; z-index: 60;
+  }
+  .tbar .tb-find {
+    border: 1px solid var(--border); border-radius: 99px; padding: 6px 11px;
+    font-size: 12px; width: 150px; outline: none; font-family: inherit;
+  }
+  .tbar .tb-find:focus { border-color: var(--accent); }
+  .tbar .tb-btn {
+    border: none; background: none; cursor: pointer; border-radius: 99px;
+    padding: 6px 9px; font-size: 12px; font-weight: 700; color: var(--muted);
+    font-family: inherit; white-space: nowrap;
+  }
+  .tbar .tb-btn:hover { background: var(--olive-soft); color: var(--text); }
+  .tbar .tb-del:hover { color: var(--red); }
+  .tbar .ac { top: 100%; left: 10px; right: 10px; }
+  .no-guests {
+    color: var(--faint); font-size: 11.5px; font-style: italic;
+    grid-column: 1 / -1; text-align: center; padding: 8px 0;
+  }
+  .table.round { border-radius: 50%; padding: 0; }
+  .round-core {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 1;
+  }
+  .round-core .table-count { margin: 0; }
+  .round-center {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 7px; width: 150px;
+    z-index: 1;
+  }
+  .round-center .add-row input { padding: 5px 6px; font-size: 11.5px; }
+  .round-center .add-row button { padding: 4px 6px; font-size: 12px; }
+  .round-center .add-empty { font-size: 10px !important; }
+  .round-center .table-head { margin: 0; width: 100%; justify-content: center; }
+  .round-center .add-row { margin: 0; width: 100%; }
+  .table.round > .guest {
+    position: absolute; transform: translate(-50%,-50%);
+    z-index: 2;
+    width: 102px; justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .table.round > .guest.empty { background: transparent; border-style: dashed; box-shadow: none; }
+  .table.round > .guest .gname { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .table-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .grip {
+    cursor: grab; color: var(--faint); font-size: 14px; line-height: 1;
+    user-select: none; touch-action: none; padding: 0 2px;
+  }
+  .grip:active { cursor: grabbing; }
+  .table-num {
+    max-width: 110px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-weight: 800; font-size: 13px;
+    background: var(--accent); color: #fff;
+    border-radius: 99px; padding: 3px 11px;
+    min-width: 18px; text-align: center;
+    outline: none;
+  }
+  .table-num:focus { box-shadow: 0 0 0 2px var(--accent); }
+  .table-count { font-size: 12px; color: var(--faint); margin-left: auto; white-space: nowrap; }
+  .table-count .cap {
+    outline: none; border-bottom: 1px dashed var(--border-strong);
+    padding: 0 2px; cursor: text;
+  }
+  .table-count .cap:hover, .table-count .cap:focus { color: var(--accent); border-color: var(--accent); }
+  .orient, .del-table {
+    cursor: pointer; color: transparent; font-size: 13px; line-height: 1;
+    user-select: none; padding: 0 2px;
+  }
+  .table:hover .orient, .table:hover .del-table { color: var(--faint); }
+  .orient:hover { color: var(--accent) !important; }
+  .del-table:hover { color: var(--red) !important; }
+  .table.over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-lg); }
+  .table.over-cap .table-count { color: var(--amber); font-weight: 700; }
+
+  .seats { min-height: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .guest {
+    background: #f8ede9;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 12.5px;
+    line-height: 1.25;
+    cursor: grab;
+    display: flex; align-items: center; justify-content: space-between; gap: 4px;
+    overflow-wrap: anywhere;
+    transition: background .1s, border-color .1s;
+  }
+  .guest:hover { background: #f7e6e4; }
+  .guest:active { cursor: grabbing; }
+  .guest.dragging { opacity: .4; }
+  .guest.drop-before { box-shadow: inset 3px 0 0 -1px var(--accent); }
+  .guest.drop-after  { box-shadow: inset -3px 0 0 -1px var(--accent); }
+  .guest.picked { border-color: var(--accent); background: var(--accent-soft); }
+  body.moving .guest { cursor: copy; }
+  body.moving .guest:hover:not(.picked) { box-shadow: inset 3px 0 0 -1px var(--accent); background: var(--accent-soft); }
+  body.moving .table { cursor: copy; }
+  .guest .gname { flex: 1; outline: none; }
+  .guest .gname:focus { background: #fff; border-radius: 4px; box-shadow: 0 0 0 2px var(--accent); }
+  .guest.empty {
+    background: transparent;
+    border: 1.5px dashed var(--border-strong);
+    color: var(--faint);
+    font-style: italic;
+  }
+  body.moving .guest.empty:hover { border-color: var(--accent); background: var(--accent-soft); box-shadow: none; }
+  .menu-badge {
+    cursor: pointer; font-size: 11px; line-height: 1;
+    visibility: hidden; user-select: none;
+  }
+  .guest:hover .menu-badge { visibility: visible; }
+  .menu-badge.veg, .menu-badge.vegfish, .menu-badge.allergy { visibility: visible; }
+  .guest .x { color: transparent; cursor: pointer; font-size: 14px; line-height: 1; }
+  .guest:hover .x { color: var(--faint); }
+  .guest .x:hover { color: var(--red) !important; }
+  .add-row { display: flex; gap: 4px; margin-top: 8px; position: relative; }
+  .add-row input {
+    flex: 1; border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 8px; font-size: 12px; min-width: 0; outline: none; font-family: inherit;
+  }
+  .add-row input:focus { border-color: var(--accent); }
+  .add-row button {
+    border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+    cursor: pointer; padding: 5px 9px; font-size: 13px; color: var(--muted);
+  }
+  .add-row button:hover { background: var(--olive-soft); color: var(--text); }
+  .add-empty { font-size: 11px !important; white-space: nowrap; }
+  .ac {
+    display: none;
+    position: absolute; top: 100%; left: 0; right: 0;
+    margin-top: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg);
+    max-height: 200px; overflow: auto;
+    z-index: 300;
+  }
+  .ac.show { display: block; }
+  .ac-item {
+    padding: 7px 10px; font-size: 12.5px; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .ac-item:hover, .ac-item.active { background: var(--accent-soft); }
+  .ac-item .tag { font-size: 10px; white-space: nowrap; font-weight: 600; }
+  .ac-item .tag.free { color: var(--green); }
+  .ac-item .tag.seated { color: var(--amber); }
+  .ac-item .tag.new { color: var(--accent); }
+
+  /* ============ Move banner ============ */
+  .move-banner {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff;
+    border-radius: 12px;
+    padding: 11px 18px; font-size: 13px;
+    z-index: 500;
+    display: none; align-items: center; gap: 14px;
+    box-shadow: var(--shadow-lg);
+  }
+  .move-banner.show { display: flex; }
+  .move-banner b { color: #a5b4fc; }
+  .move-banner button {
+    border: 1px solid #57534e; background: transparent; color: #d6d3d1;
+    border-radius: 8px; padding: 4px 12px; font-size: 12px; cursor: pointer;
+  }
+  .move-banner button:hover { background: #292524; }
+
+  /* ============ Modals & drawers ============ */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 900;
+    display: flex;
+    align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity .2s ease, visibility .2s ease;
+  }
+  .overlay.show { opacity: 1; visibility: visible; }
+  .modal { transform: scale(.97) translateY(6px); transition: transform .2s ease; }
+  .overlay.show .modal { transform: none; }
+  .modal {
+    background: var(--surface);
+    border-radius: 18px;
+    box-shadow: var(--shadow-lg);
+    width: min(620px, 92vw);
+    max-height: 86vh;
+    overflow: auto;
+    padding: 28px;
+  }
+  .modal h2 { margin: 0 0 6px; font-family: var(--script); font-size: 30px; color: var(--accent); }
+  .modal .sub { color: var(--muted); font-size: 13.5px; margin-bottom: 20px; }
+  .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tpl-card {
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    cursor: pointer;
+    transition: border-color .12s, background .12s;
+  }
+  .tpl-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .tpl-card .t-icon { font-size: 26px; margin-bottom: 8px; }
+  .tpl-card .t-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .tpl-card .t-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .modal label { display: block; font-size: 12.5px; font-weight: 600; margin: 14px 0 5px; }
+  .modal input[type=text], .modal input[type=password], .modal textarea {
+    width: 100%; border: 1px solid var(--border); border-radius: 9px;
+    padding: 9px 11px; font-size: 13px; outline: none; font-family: inherit;
+  }
+  .modal input:focus { border-color: var(--accent); }
+  .modal textarea { font-family: ui-monospace, monospace; font-size: 11.5px; background: #faf6ee; }
+  .modal .row { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .modal .note { font-size: 12px; color: var(--muted); background: #faf6ee; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-top: 12px; line-height: 1.5; }
+
+  .drawer {
+    position: fixed; top: 56px; right: 0; bottom: 0;
+    width: 320px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    z-index: 400;
+    padding: 18px;
+    overflow-y: auto;
+    transform: translateX(105%);
+    transition: transform .28s ease;
+    pointer-events: none;
+  }
+  .drawer.show { transform: none; pointer-events: auto; }
+  .drawer h3 { margin: 0 0 4px; font-family: var(--script); font-size: 26px; color: var(--accent); }
+  .drawer .sub { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+  .snap-add { display: flex; gap: 6px; margin-bottom: 16px; }
+  .snap-add input {
+    flex: 1; border: 1px solid var(--border); border-radius: 9px;
+    padding: 8px 10px; font-size: 12.5px; outline: none; font-family: inherit; min-width: 0;
+  }
+  .snap-add input:focus { border-color: var(--accent); }
+  .snap {
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .snap .s-name { font-weight: 600; font-size: 13px; }
+  .snap .s-date { font-size: 11px; color: var(--faint); margin: 2px 0 8px; }
+  .snap .s-row { display: flex; gap: 6px; }
+  .snap button {
+    border: 1px solid var(--border); background: var(--surface);
+    border-radius: 7px; padding: 4px 10px; font-size: 11.5px; cursor: pointer; color: var(--text);
+  }
+  .snap button:hover { background: var(--olive-soft); }
+  .snap button.danger { color: var(--red); }
+  .empty-note { color: var(--faint); font-size: 12.5px; text-align: center; padding: 20px 0; }
+
+  /* locate flash */
+  @keyframes flashPulse {
+    0%, 100% { box-shadow: var(--shadow); }
+    20%, 60% { box-shadow: 0 0 0 5px var(--accent), var(--shadow-lg); }
+  }
+  .guest.flash { animation: flashPulse 1.6s ease; }
+  .r-item { cursor: pointer; }
+  .r-where {
+    font-size: 10px; font-weight: 800; color: var(--olive);
+    background: var(--olive-soft); border-radius: 99px; padding: 2px 7px; white-space: nowrap;
+  }
+
+  /* seating rules */
+  .rule-add { display: flex; gap: 4px; margin-bottom: 8px; }
+  .rule-add input { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 12px; outline: none; font-family: inherit; }
+  .rule-add select { border: 1px solid var(--border); border-radius: 8px; font-size: 11px; font-family: inherit; background: var(--surface); }
+  .rule-add button { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; cursor: pointer; padding: 4px 9px; }
+  .rule-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; padding: 5px 7px; border-radius: 7px; margin-bottom: 3px;
+  }
+  .rule-row .rule-txt { flex: 1; overflow-wrap: anywhere; }
+  .rule-row.ok { background: var(--green-soft); color: var(--green); }
+  .rule-row.bad { background: var(--red-soft); color: var(--red); font-weight: 700; }
+  .rule-row.pending { background: var(--olive-soft); color: var(--muted); }
+  .r-alert {
+    background: var(--red-soft); color: var(--red); font-weight: 800; font-size: 12px;
+    border-radius: 9px; padding: 7px 10px; margin-bottom: 8px; text-align: center;
+  }
+
+  /* zoom control */
+  .zoom-ctl {
+    position: fixed;
+    right: 20px; bottom: 20px;
+    z-index: 80;
+    display: flex; align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    box-shadow: var(--shadow-lg);
+    padding: 4px;
+  }
+  .zoom-ctl button {
+    border: none; background: none; cursor: pointer;
+    font-size: 16px; color: var(--muted);
+    width: 32px; height: 32px; border-radius: 50%;
+    font-family: inherit;
+  }
+  .zoom-ctl button:hover { background: var(--olive-soft); color: var(--text); }
+  .zoom-ctl .pct { width: auto; padding: 0 8px; font-size: 12px; font-weight: 800; border-radius: 99px; }
+
+  /* credit */
+  .credit {
+    position: fixed;
+    left: 14px; bottom: 14px;
+    z-index: 70;
+    font-size: 11px;
+    color: var(--faint);
+    background: rgba(255, 251, 250, .8);
+    backdrop-filter: blur(4px);
+    border-radius: 99px;
+    padding: 4px 12px;
+    user-select: none;
+    pointer-events: none;
+  }
+  .credit b { color: var(--accent); font-weight: 700; }
+  @media print { .credit { display: none; } }
+
+  /* print */
+  #printArea { display: none; }
+  @media print {
+    .topbar, .layout, .move-banner, .drawer, .overlay { display: none !important; }
+    #printArea { display: block; font-family: Nunito, sans-serif; color: #000; padding: 10px; }
+    #printArea h1 { font-family: var(--script); font-size: 34px; margin: 0 0 14px; }
+    .p-grid { column-count: 2; column-gap: 24px; }
+    .p-table { break-inside: avoid; margin-bottom: 16px; }
+    .p-table h3 { margin: 0 0 4px; font-size: 15px; }
+    .p-table small { color: #777; font-weight: 400; }
+    .p-table ol { margin: 0; padding-left: 22px; }
+    .p-table li { font-size: 12.5px; padding: 1px 0; }
+    .p-empty { color: #999; font-style: italic; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">🥂</div>
+  <select class="proj-select" id="projSelect" onchange="switchProject(this.value)"></select>
+  <span class="sync-pill" id="syncPill"><span class="dot"></span><span id="syncText">local</span></span>
+  <span class="spacer"></span>
+  <button class="btn ghost" onclick="toggleDrawer()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Versions
+  </button>
+  <button class="btn primary" onclick="addTable()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Table
+  </button>
+  <button class="btn" onclick="addZone()">+ Zone</button>
+  <div class="menu-wrap">
+    <button class="btn ghost" onclick="toggleMenu(event)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
+    </button>
+    <div class="dropdown" id="mainMenu">
+      <button onclick="openTemplates()">🏛&nbsp; Start from a template</button>
+      <button onclick="renameProject()">✏️&nbsp; Rename event</button>
+      <hr>
+      <button onclick="saveFile()">💾&nbsp; Download a backup</button>
+      <button onclick="document.getElementById('loadInput').click()">📂&nbsp; Open a backup</button>
+      <button onclick="exportList()">📋&nbsp; Copy list as text</button>
+      <button onclick="printView()">🖨&nbsp; Print / PDF</button>
+      <hr>
+      <button onclick="openSettings()">☁️&nbsp; Save online (any computer)</button>
+      <hr>
+      <button class="danger" onclick="deleteProject()">🗑&nbsp; Delete event</button>
+    </div>
+  </div>
+  <input type="file" id="loadInput" accept="application/json,.json" style="display:none" onchange="loadFile(this)">
+</div>
+
+<button class="roster-tab" onclick="toggleRoster()" title="Guest list">
+  <span class="rt-ic">👥</span>
+  <span class="rt-txt">Guests</span>
+  <span class="rt-badge hidden" id="rosterTabBadge"></span>
+  <span class="rt-chev">›</span>
+</button>
+
+<div class="layout">
+  <aside class="roster" id="roster"></aside>
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+  </div>
+</div>
+
+<div class="overlay" id="bulkOverlay">
+  <div class="modal">
+    <h2>Paste your guest list</h2>
+    <div class="sub">One name per line — everyone gets added to your list. Names already on it are skipped.</div>
+    <textarea id="bulkText" rows="12" placeholder="Anna Smith&#10;Ben Carter&#10;Chloe Park&#10;…"></textarea>
+    <div class="row">
+      <button class="btn" onclick="closeBulk()">Cancel</button>
+      <button class="btn primary" onclick="applyBulk()">Add guests</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<div class="credit">© <b>Teodora Cristea</b> · All rights reserved</div>
+
+<div class="zoom-ctl" title="Zoom the plan (or pinch / Ctrl+scroll)">
+  <button onclick="setZoom(zoom - 0.1)" title="Zoom out">−</button>
+  <button class="pct" id="zoomPct" onclick="setZoom(1)" title="Reset to 100%">100%</button>
+  <button onclick="setZoom(zoom + 0.1)" title="Zoom in">+</button>
+</div>
+
+<div class="move-banner" id="moveBanner">
+  <span>Moving <b id="moveName"></b> — click where they should sit 💫</span>
+  <button onclick="cancelPick()">Cancel (Esc)</button>
+</div>
+
+<!-- Onboarding / templates -->
+<div class="overlay" id="tplOverlay">
+  <div class="modal">
+    <h2>Let’s set up the room ✨</h2>
+    <div class="sub">Pick a starting point — you can move, add or change anything afterwards.</div>
+    <div class="tpl-grid">
+      <div class="tpl-card" onclick="applyTemplate('sample')">
+        <div class="t-icon">🪄</div>
+        <div class="t-name">Example with guests</div>
+        <div class="t-desc">A small filled-in sample so you can see how everything works. Generic names — delete them anytime.</div>
+      </div>
+      <div class="tpl-card" onclick="applyTemplate('classic')">
+        <div class="t-icon">💍</div>
+        <div class="t-name">Classic wedding hall</div>
+        <div class="t-desc">Central dance floor, DJ, bar and 10 round tables of 8. A typical starting point for weddings.</div>
+      </div>
+      <div class="tpl-card" onclick="applyTemplate('banquet')">
+        <div class="t-icon">🍽️</div>
+        <div class="t-name">Banquet / corporate</div>
+        <div class="t-desc">Stage up front, 8 rectangular tables in two columns. For conferences, galas, company parties.</div>
+      </div>
+      <div class="tpl-card" onclick="applyTemplate('blank')">
+        <div class="t-icon">✏️</div>
+        <div class="t-name">Blank canvas</div>
+        <div class="t-desc">Start from scratch: add your own tables and zones to match your venue.</div>
+      </div>
+      <div class="tpl-card" onclick="closeTemplates()">
+        <div class="t-icon">↩️</div>
+        <div class="t-name">Not now</div>
+        <div class="t-desc">Close this window without changing anything.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings / Supabase -->
+<div class="overlay" id="setOverlay">
+  <div class="modal">
+    <h2>Save online</h2>
+    <div class="sub">With online saving on, your plan is always safe and opens on any computer. One-time setup, about 5 minutes.</div>
+    <label>1 · Create a free account at <a href="https://supabase.com" target="_blank">supabase.com</a> → “New project”. Then open “SQL Editor”, paste the text below and press Run:</label>
+    <textarea rows="6" readonly onclick="this.select()">create table if not exists events (
+  id text primary key,
+  name text not null,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+alter table events enable row level security;
+create policy "anon full access" on events for all to anon using (true) with check (true);</textarea>
+    <label>2 · Copy the “Project URL” (Settings → API)</label>
+    <input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co">
+    <label>3 · Copy the “anon public” / “publishable” key (same page)</label>
+    <input type="password" id="sbKey" placeholder="eyJhbGciOi...">
+    <div class="note">The key stays in your browser only — share it with someone only if you want them to see the plan too. You can disconnect anytime.</div>
+    <div class="row">
+      <button class="btn" onclick="disconnectCloud()">Turn off</button>
+      <button class="btn" onclick="closeSettings()">Cancel</button>
+      <button class="btn primary" onclick="connectCloud()">Turn on ✨</button>
+    </div>
+  </div>
+</div>
+
+<!-- Versions drawer -->
+<div class="drawer" id="drawer">
+  <h3>My versions</h3>
+  <div class="sub">Keep the current layout as a version — if you change your mind, bring it back with one click.</div>
+  <div class="snap-add">
+    <input type="text" id="snapName" placeholder="e.g. before the RSVPs" onkeydown="if(event.key==='Enter')saveSnapshot()">
+    <button class="btn primary" onclick="saveSnapshot()">Save</button>
+  </div>
+  <div id="snapList"></div>
+</div>
+
+<script>
+// ================= Utils =================
+const EMPTY_SEAT = "__gol__";
+function normName(s){ return String(s).trim().toLowerCase().replace(/\s+/g," "); }
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function newId(){ return "p" + Math.random().toString(36).slice(2,10); }
+function deep(o){ return JSON.parse(JSON.stringify(o)); }
+
+// ================= Storage: local always, cloud (Supabase) when configured =================
+const DB_KEY = "seatmap_db_v3";
+const SB_KEY = "seatmap_supabase";
+let sb = null;           // supabase client
+let syncTimer = null;
+let db = loadDB();
+
+function emptyProject(name) {
+  return { name, tables: [], zones: [], master: [], menus: {}, edited: [], snapshots: [], rules: [], nextUid: 0 };
+}
+
+function loadDB() {
+  try { const s = localStorage.getItem(DB_KEY); if (s) return JSON.parse(s); } catch(e){}
+  const id = newId();
+  return { current: id, projects: { [id]: emptyProject("My event") }, onboarded: false };
+}
+
+function P() { return db.projects[db.current]; }
+function getTable(id) { return P().tables.find(t => t._id == id); }
+function nextUid() { P().nextUid = (P().nextUid || 0) + 1; return P().nextUid; }
+
+let undoStack = [], redoStack = [], lastState = null, historyMuted = false;
+function resetHistory() { undoStack.length = 0; redoStack.length = 0; lastState = JSON.stringify(P()); }
+function saveDB() {
+  const cur = JSON.stringify(db.projects[db.current]);
+  if (!historyMuted && lastState !== null && cur !== lastState) {
+    undoStack.push(lastState);
+    if (undoStack.length > 80) undoStack.shift();
+    redoStack.length = 0;
+  }
+  lastState = cur;
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+  setSync(sb ? "pending" : "local");
+  if (sb) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(pushCloud, 900);
+  }
+}
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify(P()));
+  const st = undoStack.pop();
+  db.projects[db.current] = JSON.parse(st);
+  historyMuted = true; renderAll(); historyMuted = false;
+  lastState = st;
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify(P()));
+  const st = redoStack.pop();
+  db.projects[db.current] = JSON.parse(st);
+  historyMuted = true; renderAll(); historyMuted = false;
+  lastState = st;
+}
+document.addEventListener("keydown", e => {
+  if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+  const t = e.target;
+  if (t.isContentEditable || ["INPUT","TEXTAREA","SELECT"].includes(t.tagName)) return;
+  e.preventDefault();
+  if (e.shiftKey) redo(); else undo();
+});
+
+function setSync(state, extra) {
+  const pill = document.getElementById("syncPill");
+  const txt = document.getElementById("syncText");
+  pill.className = "sync-pill";
+  const d = new Date();
+  const hm = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  if (state === "local")   { txt.textContent = "saved on this device ✓ " + hm; }
+  if (state === "pending") { txt.textContent = "saving…"; }
+  if (state === "cloud")   { pill.classList.add("cloud"); txt.textContent = "saved online ✓ " + hm; }
+  if (state === "err")     { pill.classList.add("err"); txt.textContent = extra || "couldn’t save online — check your internet"; }
+}
+
+// ---- Supabase ----
+function sbConfig() { try { return JSON.parse(localStorage.getItem(SB_KEY)); } catch(e){ return null; } }
+function initCloud() {
+  const cfg = sbConfig();
+  if (!cfg || !cfg.url || !cfg.key || !window.supabase) return;
+  try {
+    sb = window.supabase.createClient(cfg.url, cfg.key);
+    pullCloud();
+  } catch(e) { setSync("err", "invalid settings"); }
+}
+async function pushCloud() {
+  if (!sb) return;
+  try {
+    const rows = Object.entries(db.projects).map(([id,p]) => ({ id, name: p.name, data: p, updated_at: new Date().toISOString() }));
+    const { error } = await sb.from("events").upsert(rows);
+    if (error) throw error;
+    setSync("cloud");
+  } catch(e) { setSync("err"); }
+}
+async function pullCloud() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from("events").select("id,name,data");
+    if (error) throw error;
+    if (data && data.length) {
+      for (const row of data) {
+        db.projects[row.id] = row.data;
+        db.projects[row.id].name = row.name;
+        db.projects[row.id].snapshots = db.projects[row.id].snapshots || [];
+      }
+      if (!db.projects[db.current]) db.current = data[0].id;
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
+    } else {
+      await pushCloud();  // first connect: seed cloud with local data
+    }
+    setSync("cloud");
+    resetHistory();
+    renderAll();
+  } catch(e) { setSync("err"); }
+}
+function openSettings() {
+  closeMenus();
+  const cfg = sbConfig() || {};
+  document.getElementById("sbUrl").value = cfg.url || "";
+  document.getElementById("sbKey").value = cfg.key || "";
+  document.getElementById("setOverlay").classList.add("show");
+}
+function closeSettings() { document.getElementById("setOverlay").classList.remove("show"); }
+function connectCloud() {
+  const url = document.getElementById("sbUrl").value.trim();
+  const key = document.getElementById("sbKey").value.trim();
+  if (!url || !key) { alert("Please fill in both the URL and the key."); return; }
+  localStorage.setItem(SB_KEY, JSON.stringify({ url, key }));
+  closeSettings();
+  initCloud();
+}
+function disconnectCloud() {
+  localStorage.removeItem(SB_KEY);
+  sb = null;
+  closeSettings();
+  setSync("local");
+}
+
+// ================= Templates & onboarding =================
+function openTemplates() { closeMenus(); document.getElementById("tplOverlay").classList.add("show"); }
+function closeTemplates() { document.getElementById("tplOverlay").classList.remove("show"); db.onboarded = true; saveDB(); }
+function applyTemplate(kind) {
+  const p = P();
+  const hasContent = p.tables.length || p.zones.length;
+  if (hasContent && !confirm("This template replaces the current layout of this event. Continue?")) return;
+  p.tables = []; p.zones = []; p.nextUid = 0;
+  const classicZones = () => [
+    { _id:"z1", label:"Dance floor", x:640, y:420, w:340, h:340, shape:"ellipse" },
+    { _id:"z2", label:"DJ",          x:740, y:300, w:140, h:50,  shape:"rect" },
+    { _id:"z3", label:"Bar",         x:40,  y:1080, w:160, h:60, shape:"rect" },
+    { _id:"z4", label:"Entrance",    x:1400,y:60,  w:140, h:44,  shape:"rect" },
+  ];
+  if (kind === "classic") {
+    p.zones = classicZones();
+    const spots = [
+      [120,80],[460,80],[880,80],[1220,80],
+      [120,460],[1220,460],
+      [120,840],[460,900],[880,900],[1220,840],
+    ];
+    spots.forEach(([x,y],i) => p.tables.push({ _id: nextUid(), num: String(i+1), cap: 8, x, y, shape: "round", guests: [] }));
+  }
+  if (kind === "sample") {
+    p.zones = classicZones();
+    const T = [
+      ["Anna","Ben","Clara","David","Emma","Felix"],
+      ["Grace","Henry","Ivy","Jack","Kate","Liam"],
+      ["Mia","Noah","Olivia","Peter","Quinn","Rosa"],
+      ["Sam","Tess","Victor","Wendy"],
+    ];
+    const spots = [[150,120],[1150,120],[150,760],[1150,760]];
+    T.forEach((guests, i) => p.tables.push({ _id: nextUid(), num: String(i+1), cap: 8, x: spots[i][0], y: spots[i][1], shape: "round", guests: guests.slice() }));
+    p.master = [...T.flat(), "Uma", "Xavier", "Yara", "Zack"];
+  }
+  if (kind === "banquet") {
+    p.zones = [
+      { _id:"z1", label:"Stage", x:560, y:30, w:480, h:90, shape:"rect" },
+      { _id:"z2", label:"Entrance", x:60, y:1140, w:140, h:44, shape:"rect" },
+    ];
+    for (let i = 0; i < 8; i++) {
+      const col = i % 2, row = Math.floor(i / 2);
+      p.tables.push({ _id: nextUid(), num: String(i+1), cap: 10, x: 260 + col * 560, y: 200 + row * 250, shape: "h", guests: [] });
+    }
+  }
+  db.onboarded = true;
+  closeTemplatesOnly();
+  renderAll();
+  centerBoard();
+}
+function closeTemplatesOnly(){ document.getElementById("tplOverlay").classList.remove("show"); }
+
+// ================= Menus dictionary =================
+const MENU_ICON = { veg: "🌱", vegfish: "🐟", allergy: "⚠️" };
+const MENU_TITLE = { veg: "Vegetarian", vegfish: "Veg + fish", allergy: "ALLERGY" };
+const MENU_CYCLE = { undefined: "veg", veg: "vegfish", vegfish: "allergy", allergy: undefined };
+
+// ================= Projects UI =================
+function renderProjects() {
+  const sel = document.getElementById("projSelect");
+  sel.innerHTML = Object.entries(db.projects)
+    .map(([id,p]) => `<option value="${id}" ${id===db.current?"selected":""}>${escapeHtml(p.name)}</option>`)
+    .join("") + `<option value="__new__">＋ New event…</option>`;
+}
+function switchProject(id) {
+  if (id === "__new__") {
+    const name = prompt("Event name:", "New event");
+    if (!name) { renderProjects(); return; }
+    const nid = newId();
+    db.projects[nid] = emptyProject(name.trim());
+    db.current = nid;
+    cancelPick(); resetHistory(); saveDB(); renderAll();
+    openTemplates();          // new event: offer a starting template
+    return;
+  }
+  db.current = id;
+  cancelPick(); resetHistory(); saveDB(); renderAll();
+}
+function renameProject() {
+  closeMenus();
+  const name = prompt("Event name:", P().name);
+  if (name && name.trim()) { P().name = name.trim(); saveDB(); renderProjects(); }
+}
+async function deleteProject() {
+  closeMenus();
+  if (!confirm(`Delete “${P().name}” with all its tables, guests and versions?`)) return;
+  const deadId = db.current;
+  delete db.projects[deadId];
+  if (sb) { try { await sb.from("events").delete().eq("id", deadId); } catch(e){} }
+  if (Object.keys(db.projects).length === 0) {
+    const id = newId();
+    db.projects[id] = emptyProject("My event");
+  }
+  db.current = Object.keys(db.projects)[0];
+  resetHistory(); saveDB(); renderAll();
+}
+
+// ================= Snapshots (fazele intermediare) =================
+function toggleDrawer() {
+  const d = document.getElementById("drawer");
+  d.classList.toggle("show");
+  if (d.classList.contains("show")) renderSnapshots();
+}
+function saveSnapshot() {
+  const inp = document.getElementById("snapName");
+  const name = inp.value.trim() || ("Version " + (P().snapshots.length + 1));
+  P().snapshots.unshift({
+    id: newId(),
+    name,
+    at: new Date().toISOString(),
+    data: deep({ tables: P().tables, zones: P().zones, master: P().master, menus: P().menus, edited: P().edited, rules: P().rules || [] })
+  });
+  inp.value = "";
+  saveDB(); renderSnapshots();
+}
+function restoreSnapshot(id) {
+  const s = P().snapshots.find(x => x.id === id);
+  if (!s) return;
+  if (!confirm(`Restore “${s.name}”? The current layout will be replaced.`)) return;
+  const p = P();
+  const d = deep(s.data);
+  p.tables = d.tables; p.zones = d.zones; p.master = d.master; p.menus = d.menus; p.edited = d.edited; p.rules = d.rules || [];
+  p.nextUid = Math.max(p.nextUid||0, ...p.tables.map(t => t._id||0)) + 1;
+  renderAll(); renderSnapshots();
+}
+function deleteSnapshot(id) {
+  const s = P().snapshots.find(x => x.id === id);
+  if (!s || !confirm(`Delete version “${s.name}”?`)) return;
+  P().snapshots = P().snapshots.filter(x => x.id !== id);
+  saveDB(); renderSnapshots();
+}
+function renderSnapshots() {
+  const list = document.getElementById("snapList");
+  const snaps = P().snapshots || [];
+  if (!snaps.length) { list.innerHTML = `<div class="empty-note">No versions yet.<br>Save the current one above. 💛</div>`; return; }
+  list.innerHTML = snaps.map(s => {
+    const d = new Date(s.at);
+    const when = d.toLocaleDateString("en-GB", {day:"numeric", month:"short"}) + " · " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+    const seated = s.data.tables.flatMap(t=>t.guests).filter(g=>g!==EMPTY_SEAT).length;
+    return `<div class="snap">
+      <div class="s-name">${escapeHtml(s.name)}</div>
+      <div class="s-date">${when} · ${s.data.tables.length} tables · ${seated} guests</div>
+      <div class="s-row">
+        <button onclick="restoreSnapshot('${s.id}')">Restore</button>
+        <button class="danger" onclick="deleteSnapshot('${s.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ================= Menus / dropdown =================
+function toggleMenu(e) {
+  e.stopPropagation();
+  document.getElementById("mainMenu").classList.toggle("show");
+}
+function closeMenus() { document.getElementById("mainMenu").classList.remove("show"); }
+document.addEventListener("click", e => { if (!e.target.closest(".menu-wrap")) closeMenus(); });
+
+// ================= Zones =================
+function addZone() {
+  P().zones.push({ _id: "z" + newId(), label: "New zone", x: 700, y: 80, w: 200, h: 110, shape: "rect" });
+  saveDB(); render();
+}
+function renderZones(board) {
+  for (const z of P().zones) {
+    const el = document.createElement("div");
+    el.className = "zone" + (z.shape === "ellipse" ? " ellipse" : "");
+    el.style.left = z.x + "px"; el.style.top = z.y + "px";
+    el.style.width = z.w + "px"; el.style.height = z.h + "px";
+    el.dataset.id = z._id;
+    el.innerHTML = `
+      <span class="z-label" contenteditable="false" title="Double-click to rename">${escapeHtml(z.label)}</span>
+      <div class="z-tools">
+        <span title="Shape: rectangle / oval">◐</span>
+        <span class="del" title="Delete zone">×</span>
+      </div>
+      <span class="z-resize" title="Drag to resize"></span>`;
+    board.appendChild(el);
+
+    const label = el.querySelector(".z-label");
+    label.addEventListener("dblclick", e => {
+      e.stopPropagation();
+      label.contentEditable = "true"; label.focus();
+      const r = document.createRange(); r.selectNodeContents(label);
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    });
+    label.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); label.blur(); } });
+    label.addEventListener("blur", () => {
+      label.contentEditable = "false";
+      z.label = label.textContent.trim() || "Zone";
+      saveDB(); render();
+    });
+    const tools = el.querySelectorAll(".z-tools span");
+    tools[0].addEventListener("click", e => { e.stopPropagation(); z.shape = z.shape === "ellipse" ? "rect" : "ellipse"; saveDB(); render(); });
+    tools[1].addEventListener("click", e => {
+      e.stopPropagation();
+      if (confirm(`Delete zone “${z.label}”?`)) { P().zones = P().zones.filter(x => x._id !== z._id); saveDB(); render(); }
+    });
+    el.addEventListener("pointerdown", e => {
+      if (e.target.closest(".z-tools") || e.target.closest(".z-resize") || e.target.isContentEditable) return;
+      e.preventDefault();
+      const sx = e.clientX, sy = e.clientY, ox = z.x, oy = z.y;
+      el.setPointerCapture(e.pointerId);
+      const move = ev => {
+        z.x = Math.max(0, ox + (ev.clientX - sx) / zoom);
+        z.y = Math.max(0, oy + (ev.clientY - sy) / zoom);
+        el.style.left = z.x + "px"; el.style.top = z.y + "px";
+      };
+      const up = () => { el.removeEventListener("pointermove", move); el.removeEventListener("pointerup", up); saveDB(); };
+      el.addEventListener("pointermove", move);
+      el.addEventListener("pointerup", up);
+    });
+    const rs = el.querySelector(".z-resize");
+    rs.addEventListener("pointerdown", e => {
+      e.preventDefault(); e.stopPropagation();
+      const sx = e.clientX, sy = e.clientY, ow = z.w, oh = z.h;
+      rs.setPointerCapture(e.pointerId);
+      const move = ev => {
+        z.w = Math.max(50, ow + (ev.clientX - sx) / zoom);
+        z.h = Math.max(30, oh + (ev.clientY - sy) / zoom);
+        el.style.width = z.w + "px"; el.style.height = z.h + "px";
+      };
+      const up = () => { rs.removeEventListener("pointermove", move); rs.removeEventListener("pointerup", up); saveDB(); };
+      rs.addEventListener("pointermove", move);
+      rs.addEventListener("pointerup", up);
+    });
+  }
+}
+
+// ================= Render =================
+const board = document.getElementById("board");
+function shapeIcon(t) { return t.shape === "h" ? "▬" : t.shape === "round" ? "●" : "▯"; }
+function nextShape(s) { return s === "h" ? "round" : s === "round" ? "v" : "h"; }
+
+function render() {
+  board.innerHTML = "";
+  renderZones(board);
+  const p = P();
+  let total = 0;
+
+  for (const t of p.tables) {
+    if (!t._id) t._id = nextUid();
+    const seatedCount = t.guests.filter(g => g !== EMPTY_SEAT).length;
+    total += seatedCount;
+    const over = seatedCount > Number(t.cap);
+    const el = document.createElement("div");
+    const round = t.shape === "round";
+    el.className = "table" + (over ? " over-cap" : "") + (t.shape === "h" ? " wide" : "") + (round ? " round" : "");
+    el.style.left = t.x + "px";
+    el.style.top = t.y + "px";
+    el.dataset.id = t._id;
+
+    const chip = (g,i,style="") => g === EMPTY_SEAT
+      ? `<div class="guest empty" draggable="true" data-id="${t._id}" data-idx="${i}"${style}>
+          <span>empty</span>
+          <span class="x" data-id="${t._id}" data-idx="${i}">×</span>
+        </div>`
+      : `<div class="guest" draggable="true" data-id="${t._id}" data-idx="${i}"${style}>
+        <span class="gname" data-id="${t._id}" data-idx="${i}" title="${escapeHtml(g)}">${escapeHtml(g)}</span>
+        <span class="menu-badge ${p.menus[normName(g)] || ""}" data-name="${escapeHtml(g)}" title="${MENU_TITLE[p.menus[normName(g)]] || "Standard — click to change menu"}">${MENU_ICON[p.menus[normName(g)]] || "🍽"}</span>
+        <span class="x" data-id="${t._id}" data-idx="${i}">×</span>
+      </div>`;
+
+    const numHtml = `<span class="table-num" contenteditable="true" data-id="${t._id}" title="Table name/number — click to edit">${escapeHtml(t.num)}</span>`;
+    const cntHtml = `<span class="table-count">${seatedCount}/<span class="cap" contenteditable="true" data-id="${t._id}" title="Click to edit the number of seats">${escapeHtml(t.cap)}</span></span>`;
+    const headHtml = `<div class="table-head">${numHtml}${cntHtml}</div>`;
+
+    if (round) {
+      // seats sit around the circle — list neighbours = real-life neighbours
+      const n = t.guests.length;
+      let R, d;
+      if (n <= 2) {           // 0–2 guests: compact circle, chips top/bottom only
+        R = 76; d = n ? 252 : 200;
+      } else {                // 3+: radius always clears the centre label
+        R = Math.max(102, Math.round(40 + n * 14));
+        d = 2 * R + 120;
+      }
+      el.style.width = d + "px"; el.style.height = d + "px";
+      const cx = d / 2, cy = d / 2;
+      const seatsAbs = t.guests.map((g,i) => {
+        const a = n <= 2
+          ? (-Math.PI / 2 + Math.PI * i)                 // top, then bottom
+          : (-Math.PI / 2 + (2 * Math.PI * i) / n);
+        const x = Math.round(cx + R * Math.cos(a));
+        const y = Math.round(cy + R * Math.sin(a));
+        return chip(g, i, ` style="left:${x}px;top:${y}px"`);
+      }).join("");
+      el.innerHTML = `<div class="round-core">${numHtml}${cntHtml}</div>` + seatsAbs;
+    } else {
+      const seatsInner = t.guests.length ? t.guests.map((g,i) => chip(g,i)).join("") : `<div class="no-guests">click the table, then “find a guest”</div>`;
+      el.innerHTML = headHtml + `<div class="seats">${seatsInner}</div>`;
+    }
+    if (String(t._id) === String(selectedTable)) el.classList.add("sel");
+    board.appendChild(el);
+  }
+  wireEvents();
+  buildToolbar();
+  renderRoster();
+  saveDB();
+}
+function renderAll() { renderProjects(); render(); }
+
+// ================= Selection + floating toolbar (Miro-style) =================
+let selectedTable = null;
+let tbRefocus = false;
+function clearSelection() {
+  selectedTable = null;
+  document.querySelectorAll(".table.sel").forEach(x => x.classList.remove("sel"));
+  const bar = document.getElementById("tbar"); if (bar) bar.remove();
+}
+function selectTable(id) {
+  selectedTable = id;
+  document.querySelectorAll(".table.sel").forEach(x => x.classList.remove("sel"));
+  const el = document.querySelector(`.table[data-id="${id}"]`);
+  if (el) el.classList.add("sel");
+  buildToolbar();
+}
+function positionToolbar(bar, t) {
+  const el = document.querySelector(`.table[data-id="${t._id}"]`);
+  if (!el) return;
+  bar.style.left = (t.x + el.offsetWidth / 2) + "px";
+  bar.style.top = (t.y - 12) + "px";
+}
+function buildToolbar() {
+  const old = document.getElementById("tbar"); if (old) old.remove();
+  if (!selectedTable) return;
+  const t = getTable(selectedTable);
+  if (!t) { selectedTable = null; return; }
+  const bar = document.createElement("div");
+  bar.className = "tbar"; bar.id = "tbar";
+  bar.innerHTML = `
+    <input class="tb-find" placeholder="find a guest…" data-id="${t._id}" autocomplete="off">
+    <button class="tb-btn" id="tbSeat" title="Add an empty seat">+ seat</button>
+    <button class="tb-btn" id="tbShape" title="Shape: vertical / horizontal / round">${shapeIcon(t)}</button>
+    <button class="tb-btn tb-del" id="tbDel" title="Delete table">🗑</button>
+    <div class="ac"></div>`;
+  positionToolbar(bar, t);
+  board.appendChild(bar);
+  bar.addEventListener("pointerdown", e => e.stopPropagation());
+
+  const inp = bar.querySelector(".tb-find");
+  inp.addEventListener("input", () => showAC(inp));
+  inp.addEventListener("focus", () => showAC(inp));
+  inp.addEventListener("blur", () => setTimeout(() => hideAC(inp), 150));
+  inp.addEventListener("keydown", e => {
+    const ac = bar.querySelector(".ac");
+    const items = [...ac.querySelectorAll(".ac-item")];
+    let active = ac.querySelector(".ac-item.active");
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!items.length) return;
+      let i = items.indexOf(active);
+      i = e.key === "ArrowDown" ? Math.min(items.length - 1, i + 1) : Math.max(0, i - 1);
+      items.forEach(x => x.classList.remove("active"));
+      items[i].classList.add("active");
+      items[i].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      tbRefocus = true;
+      if (active) assignToTable(inp.dataset.id, active.dataset.name);
+      else if (inp.value.trim()) assignToTable(inp.dataset.id, inp.value.trim());
+    } else if (e.key === "Escape") hideAC(inp);
+  });
+  bar.querySelector(".ac").addEventListener("mousedown", e => {
+    const item = e.target.closest(".ac-item");
+    if (!item) return;
+    e.preventDefault();
+    tbRefocus = true;
+    assignToTable(item.dataset.id, item.dataset.name);
+  });
+  bar.querySelector("#tbSeat").addEventListener("click", () => { getTable(t._id).guests.push(EMPTY_SEAT); render(); });
+  bar.querySelector("#tbShape").addEventListener("click", () => { const tt = getTable(t._id); tt.shape = nextShape(tt.shape); render(); });
+  bar.querySelector("#tbDel").addEventListener("click", () => {
+    const tt = getTable(t._id);
+    if (confirm(`Delete table ${tt.num}` + (tt.guests.length ? ` (with ${tt.guests.filter(g=>g!==EMPTY_SEAT).length} guests)` : "") + "?")) {
+      P().tables = P().tables.filter(x => x._id != t._id);
+      clearSelection();
+      render();
+    }
+  });
+  if (tbRefocus) { inp.focus(); tbRefocus = false; }
+}
+board.addEventListener("pointerdown", e => {
+  if (e.target === board) clearSelection();
+});
+
+// ================= Roster =================
+function toggleRoster() {
+  document.getElementById("roster").classList.toggle("show");
+  document.body.classList.toggle("roster-open");
+}
+let rosterOnlyUnassigned = false;
+let rosterQuery = "";
+function toggleRosterFilter() { rosterOnlyUnassigned = !rosterOnlyUnassigned; renderRoster(); }
+function filterRoster(q) {
+  rosterQuery = q;
+  const nn = normName(q);
+  document.querySelectorAll("#roster .r-list .r-item").forEach(it => {
+    const name = normName(it.querySelector(".r-name").textContent);
+    it.style.display = (!nn || name.includes(nn)) ? "" : "none";
+  });
+}
+function whereSeated(name) {
+  const nn = normName(name);
+  const t = P().tables.find(t => t.guests.some(g => g !== EMPTY_SEAT && normName(g) === nn));
+  return t ? t.num : null;
+}
+
+function locateGuest(name) {
+  const nn = normName(name);
+  const gn = [...document.querySelectorAll(".guest .gname")].find(x => normName(x.textContent) === nn);
+  if (!gn) return;
+  const chipEl = gn.closest(".guest");
+  chipEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+  chipEl.classList.add("flash");
+  setTimeout(() => chipEl.classList.remove("flash"), 1700);
+}
+
+function renderRoster() {
+  const p = P();
+  p.rules = p.rules || [];
+  const assigned = new Set();
+  const whereMap = new Map();
+  p.tables.forEach(t => t.guests.forEach(g => {
+    if (g !== EMPTY_SEAT) { assigned.add(normName(g)); whereMap.set(normName(g), t.num); }
+  }));
+  const masterNorm = new Set(p.master.map(normName));
+  const editedSet = new Set(p.edited);
+
+  let unassigned = 0, listHtml = "";
+  p.master.forEach((name, i) => {
+    const on = assigned.has(normName(name));
+    if (!on) unassigned++;
+    if (rosterOnlyUnassigned && on) return;
+    const at = whereMap.get(normName(name));
+    listHtml += `<div class="r-item ${on ? "on" : "off"}" data-idx="${i}" data-name="${escapeHtml(name)}" title="${on ? "Click to find them on the plan" : "Not seated yet"}">
+      <span class="r-dot"></span>
+      <span class="r-name" data-idx="${i}" ondblclick="startRosterEdit(this)">${escapeHtml(name)}</span>
+      ${at ? `<span class="r-where">t${escapeHtml(at)}</span>` : ''}
+      ${editedSet.has(normName(name)) ? '<span class="r-edited">edited</span>' : ''}
+      <span class="r-x" onclick="masterRemove(${i})" title="Remove from the list">×</span></div>`;
+  });
+
+  const extras = [];
+  p.tables.forEach(t => t.guests.forEach(g => { if (g !== EMPTY_SEAT && !masterNorm.has(normName(g))) extras.push([g, t.num]); }));
+  let extraHtml = "";
+  if (extras.length) {
+    extraHtml = `<div class="r-section">Extras (${extras.length})</div>` +
+      extras.map(([g,tn]) => `<div class="r-item extra" data-name="${escapeHtml(g)}"><span class="r-dot"></span><span class="r-name">${escapeHtml(g)}</span><span class="r-where">t${escapeHtml(tn)}</span></div>`).join("");
+  }
+
+  // seating rules (keep together / keep apart)
+  let broken = 0;
+  const ruleRows = p.rules.map((r, i) => {
+    const ta = whereMap.get(normName(r.a)), tb = whereMap.get(normName(r.b));
+    let st = "pending", icon = "·";
+    if (ta && tb) {
+      const same = String(ta) === String(tb);
+      const ok = r.type === "together" ? same : !same;
+      st = ok ? "ok" : "bad"; icon = ok ? "✓" : "✕";
+      if (!ok) broken++;
+    }
+    return `<div class="rule-row ${st}">
+      <span class="rule-txt">${escapeHtml(r.a)} ${r.type === "together" ? "❤" : "⚡"} ${escapeHtml(r.b)}</span>
+      <span>${icon}</span>
+      <span class="r-x" style="visibility:visible" onclick="removeRule(${i})" title="Remove rule">×</span></div>`;
+  }).join("");
+  const rulesHtml = `
+    <div class="r-section">Seating rules</div>
+    ${broken ? `<div class="r-alert">⚠ ${broken} rule${broken > 1 ? "s" : ""} broken</div>` : ""}
+    <div class="rule-add">
+      <input list="masterDL" id="ruleA" placeholder="name">
+      <select id="ruleType"><option value="together">❤ together</option><option value="apart">⚡ apart</option></select>
+      <input list="masterDL" id="ruleB" placeholder="name">
+      <button onclick="addRule()" title="Add rule">+</button>
+    </div>
+    ${ruleRows || '<div class="r-sub">e.g. “grandma ❤ grandpa” must share a table, or “uncle ⚡ ex-wife” must not.</div>'}
+    <datalist id="masterDL">${p.master.map(n => `<option value="${escapeHtml(n)}">`).join("")}</datalist>`;
+
+  const tb = document.getElementById("rosterTabBadge");
+  tb.textContent = unassigned || "";
+  tb.classList.toggle("hidden", !unassigned);
+
+  document.getElementById("roster").innerHTML = `
+    <div class="r-inner">
+    <div class="r-head">
+      <strong>Guests</strong>
+      <span class="r-badge ${unassigned ? "warn" : "ok"}">${unassigned ? unassigned + " unseated" : (p.master.length ? "all seated ✓" : "empty list")}</span>
+    </div>
+    <div class="r-sub">${p.master.length} on the list · ${p.master.length - unassigned} seated</div>
+    <input class="r-search" type="text" placeholder="search the list…" oninput="filterRoster(this.value)" value="${escapeHtml(rosterQuery)}">
+    <button class="r-toggle" onclick="toggleRosterFilter()">${rosterOnlyUnassigned ? "↺ Show everyone" : "Only unseated"}</button>
+    <div class="r-add"><input type="text" placeholder="+ add a person…" onkeydown="if(event.key==='Enter'){masterAdd(this.value);this.value='';}"></div>
+    <button class="r-toggle" onclick="openBulk()">📋 Paste a whole list…</button>
+    <div class="r-list">${listHtml || '<div class="empty-note">Add guests here, or directly at a table.</div>'}</div>
+    ${extraHtml}
+    ${rulesHtml}
+    </div>`;
+
+  if (rosterQuery) filterRoster(rosterQuery);
+}
+
+// click a guest in the list -> find them on the plan
+document.getElementById("roster").addEventListener("click", e => {
+  if (e.target.closest(".r-x") || e.target.closest("input") || e.target.closest("select") || e.target.closest("button") || e.target.isContentEditable) return;
+  const it = e.target.closest(".r-item");
+  if (it && it.dataset.name) locateGuest(it.dataset.name);
+});
+
+// ============ rules ============
+function addRule() {
+  const p = P(); p.rules = p.rules || [];
+  const a = document.getElementById("ruleA").value.trim();
+  const b = document.getElementById("ruleB").value.trim();
+  const type = document.getElementById("ruleType").value;
+  if (!a || !b || normName(a) === normName(b)) { alert("Pick two different guests."); return; }
+  p.rules.push({ a, b, type });
+  saveDB(); renderRoster();
+}
+function removeRule(i) { P().rules.splice(i, 1); saveDB(); renderRoster(); }
+
+// ============ bulk paste ============
+function openBulk() { document.getElementById("bulkOverlay").classList.add("show"); document.getElementById("bulkText").focus(); }
+function closeBulk() { document.getElementById("bulkOverlay").classList.remove("show"); }
+function applyBulk() {
+  const p = P();
+  const lines = document.getElementById("bulkText").value.split("\n").map(x => x.trim()).filter(Boolean);
+  let added = 0, skipped = 0;
+  const seen = new Set(p.master.map(normName));
+  for (const name of lines) {
+    if (seen.has(normName(name))) { skipped++; continue; }
+    seen.add(normName(name));
+    p.master.push(name); added++;
+  }
+  closeBulk();
+  document.getElementById("bulkText").value = "";
+  saveDB(); renderRoster();
+  alert(added + " guest" + (added === 1 ? "" : "s") + " added" + (skipped ? " · " + skipped + " already on the list" : "") + ".");
+}
+
+// ============ print ============
+function buildPrintHtml() {
+  const p = P();
+  const sorted = [...p.tables].sort((a,b)=>(parseInt(a.num)||999)-(parseInt(b.num)||999));
+  let html = `<h1>${escapeHtml(p.name)}</h1><div class="p-grid">`;
+  for (const t of sorted) {
+    const real = t.guests.filter(g => g !== EMPTY_SEAT);
+    html += `<div class="p-table"><h3>Table ${escapeHtml(t.num)} <small>(${real.length}/${escapeHtml(t.cap)})</small></h3><ol>`;
+    t.guests.forEach(g => {
+      if (g === EMPTY_SEAT) { html += `<li class="p-empty">empty seat</li>`; return; }
+      const m = p.menus[normName(g)];
+      html += `<li>${escapeHtml(g)}${m ? ` <em>(${m === "veg" ? "vegetarian" : m === "vegfish" ? "veg+fish" : "ALLERGY"})</em>` : ""}</li>`;
+    });
+    html += `</ol></div>`;
+  }
+  html += `</div>`;
+  const unseated = p.master.filter(n => !whereSeated(n));
+  if (unseated.length) html += `<h3>Not seated yet (${unseated.length})</h3><p>${unseated.map(escapeHtml).join(", ")}</p>`;
+  document.getElementById("printArea").innerHTML = html;
+  return html;
+}
+function printView() {
+  closeMenus();
+  buildPrintHtml();
+  window.print();
+}
+
+// ================= Master list =================
+function masterAdd(name) {
+  name = String(name).trim();
+  if (!name) return;
+  const p = P();
+  if (p.master.some(n => normName(n) === normName(name))) { alert("“" + name + "” is already on the list."); return; }
+  p.master.push(name); saveDB(); renderRoster();
+}
+function masterRemove(idx) {
+  const p = P();
+  const name = p.master[idx];
+  if (name === undefined) return;
+  if (!confirm("Remove “" + name + "” from the list?")) return;
+  p.master.splice(idx, 1);
+  const nn = normName(name);
+  p.tables.forEach(t => { t.guests = t.guests.filter(g => normName(g) !== nn); });
+  render();
+}
+function moveMenuEntry(oldNorm, newNorm) {
+  const m = P().menus;
+  if (m[oldNorm] !== undefined && oldNorm !== newNorm) { m[newNorm] = m[oldNorm]; delete m[oldNorm]; }
+}
+function markEditedName(oldNorm, newNorm) {
+  const p = P();
+  p.edited = p.edited.filter(e => e !== oldNorm);
+  if (!p.edited.includes(newNorm)) p.edited.push(newNorm);
+}
+function masterRename(idx, newName) {
+  const p = P();
+  newName = String(newName).trim();
+  const old = p.master[idx];
+  if (old === undefined) return;
+  if (!newName) { renderRoster(); return; }
+  if (normName(newName) !== normName(old) && p.master.some((n, i) => i !== idx && normName(n) === normName(newName))) {
+    alert("“" + newName + "” is already on the list."); renderRoster(); return;
+  }
+  const nn = normName(old);
+  p.master[idx] = newName;
+  markEditedName(nn, normName(newName));
+  moveMenuEntry(nn, normName(newName));
+  p.tables.forEach(t => { t.guests = t.guests.map(g => normName(g) === nn ? newName : g); });
+  render();
+}
+function startRosterEdit(span) {
+  span.contentEditable = "true";
+  span.focus();
+  const range = document.createRange(); range.selectNodeContents(span);
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  span.onkeydown = e => {
+    if (e.key === "Enter") { e.preventDefault(); span.blur(); }
+    if (e.key === "Escape") { span.textContent = P().master[+span.dataset.idx]; span.blur(); }
+  };
+  span.onblur = () => { span.contentEditable = "false"; masterRename(+span.dataset.idx, span.textContent); };
+}
+function renameGuest(tableId, idx, newName) {
+  const t = getTable(tableId);
+  if (!t) return;
+  const oldName = t.guests[idx];
+  if (oldName === undefined || oldName === EMPTY_SEAT) return;
+  newName = String(newName).trim();
+  if (!newName) { t.guests.splice(idx, 1); render(); return; }
+  if (normName(newName) === normName(oldName)) { t.guests[idx] = newName; render(); return; }
+  const p = P();
+  const oldNorm = normName(oldName);
+  const mi = p.master.findIndex(n => normName(n) === oldNorm);
+  if (mi !== -1) {
+    p.master[mi] = newName;
+    p.tables.forEach(tt => { tt.guests = tt.guests.map(g => normName(g) === oldNorm ? newName : g); });
+    markEditedName(oldNorm, normName(newName));
+    moveMenuEntry(oldNorm, normName(newName));
+  } else {
+    t.guests[idx] = newName;
+    moveMenuEntry(oldNorm, normName(newName));
+  }
+  render();
+}
+
+// ================= Tables =================
+function addTable() {
+  const p = P();
+  const nextNum = String((Math.max(0, ...p.tables.map(t => parseInt(t.num)||0)) + 1));
+  const wrap = document.querySelector(".board-wrap");
+  const nid = nextUid();
+  p.tables.push({ _id: nid, num: nextNum, cap: 8, x: (wrap.scrollLeft||0) / zoom + 160, y: (wrap.scrollTop||0) / zoom + 140, shape: "round", guests: [] });
+  selectedTable = nid;
+  render();
+}
+
+// ================= Autocomplete =================
+function hideAC(inp) {
+  const ac = inp.parentElement.querySelector(".ac");
+  ac.classList.remove("show"); ac.innerHTML = "";
+}
+function showAC(inp) {
+  const p = P();
+  const ac = inp.parentElement.querySelector(".ac");
+  const q = normName(inp.value);
+  if (!q) { hideAC(inp); return; }
+  const assignedMap = new Map();
+  p.tables.forEach(t => t.guests.forEach(g => { if (g !== EMPTY_SEAT) assignedMap.set(normName(g), t.num); }));
+  let matches = p.master.filter(n => normName(n).includes(q));
+  matches.sort((a, b) => (assignedMap.has(normName(a)) ? 1 : 0) - (assignedMap.has(normName(b)) ? 1 : 0));
+  matches = matches.slice(0, 8);
+  let html = matches.map((n, i) => {
+    const at = assignedMap.get(normName(n));
+    const tag = at ? `table ${at}` : "unseated";
+    const cls = at ? "seated" : "free";
+    return `<div class="ac-item ${i === 0 ? "active" : ""}" data-id="${inp.dataset.id}" data-name="${escapeHtml(n)}">
+      <span>${escapeHtml(n)}</span><span class="tag ${cls}">${tag}</span></div>`;
+  }).join("");
+  const exact = p.master.some(n => normName(n) === q);
+  if (!exact) {
+    html += `<div class="ac-item" data-id="${inp.dataset.id}" data-name="${escapeHtml(inp.value.trim())}">
+      <span>Add “${escapeHtml(inp.value.trim())}”</span><span class="tag new">new</span></div>`;
+  }
+  ac.innerHTML = html;
+  ac.classList.toggle("show", html !== "");
+}
+function assignToTable(id, name) {
+  name = String(name).trim();
+  if (!name) return;
+  const p = P();
+  const nn = normName(name);
+  p.tables.forEach(t => { t.guests = t.guests.filter(g => normName(g) !== nn); });
+  getTable(id).guests.push(name);
+  render();
+}
+
+// ================= Click-to-move =================
+let picked = null;
+function cancelPick() {
+  picked = null;
+  document.body.classList.remove("moving");
+  const b = document.getElementById("moveBanner");
+  if (b) b.classList.remove("show");
+  document.querySelectorAll(".guest.picked").forEach(g => g.classList.remove("picked"));
+}
+function startPick(g) {
+  cancelPick();
+  picked = { id: g.dataset.id, idx: +g.dataset.idx };
+  g.classList.add("picked");
+  document.body.classList.add("moving");
+  const pname = getTable(picked.id).guests[picked.idx] || "";
+  document.getElementById("moveName").textContent = pname === EMPTY_SEAT ? "an empty seat" : pname;
+  document.getElementById("moveBanner").classList.add("show");
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape") { cancelPick(); closeMenus(); clearSelection(); } });
+
+// ================= Guest moves =================
+let dragSrc = null;
+function clearCues() { document.querySelectorAll(".guest.drop-before, .guest.drop-after").forEach(x => x.classList.remove("drop-before", "drop-after")); }
+function moveGuest(src, destId, destIdx) {
+  const srcT = getTable(src.id);
+  const name = srcT.guests[src.idx];
+  if (name === undefined) { dragSrc = null; cancelPick(); return; }
+  srcT.guests.splice(src.idx, 1);
+  const destT = getTable(destId);
+  let idx = destIdx;
+  if (idx === null || idx === undefined) idx = destT.guests.length;
+  else if (src.id === destId && src.idx < destIdx) idx = destIdx - 1;
+  destT.guests.splice(idx, 0, name);
+  dragSrc = null; cancelPick(); render();
+}
+function placeGuest(src, destId, destIdx) {
+  const destT = getTable(destId);
+  if (!destT || destT.guests[destIdx] !== EMPTY_SEAT) { moveGuest(src, destId, destIdx); return; }
+  const srcT = getTable(src.id);
+  const name = srcT.guests[src.idx];
+  if (name === undefined) { dragSrc = null; cancelPick(); return; }
+  if (srcT === destT && src.idx === destIdx) { dragSrc = null; cancelPick(); return; }
+  destT.guests[destIdx] = name;
+  srcT.guests.splice(src.idx, 1);
+  dragSrc = null; cancelPick(); render();
+}
+
+// ================= Wire events =================
+function wireEvents() {
+  document.querySelectorAll(".add-row input").forEach(inp => {
+    inp.addEventListener("input", () => showAC(inp));
+    inp.addEventListener("focus", () => showAC(inp));
+    inp.addEventListener("blur", () => setTimeout(() => hideAC(inp), 150));
+    inp.addEventListener("keydown", e => {
+      const ac = inp.parentElement.querySelector(".ac");
+      const items = [...ac.querySelectorAll(".ac-item")];
+      let active = ac.querySelector(".ac-item.active");
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!items.length) return;
+        let i = items.indexOf(active);
+        i = e.key === "ArrowDown" ? Math.min(items.length - 1, i + 1) : Math.max(0, i - 1);
+        items.forEach(x => x.classList.remove("active"));
+        items[i].classList.add("active");
+        items[i].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (active) assignToTable(inp.dataset.id, active.dataset.name);
+        else if (inp.value.trim()) assignToTable(inp.dataset.id, inp.value.trim());
+      } else if (e.key === "Escape") hideAC(inp);
+    });
+  });
+  document.querySelectorAll(".add-row .ac").forEach(ac => {
+    ac.addEventListener("mousedown", e => {
+      const item = e.target.closest(".ac-item");
+      if (!item) return;
+      e.preventDefault();
+      assignToTable(item.dataset.id, item.dataset.name);
+    });
+  });
+  document.querySelectorAll(".add-row button:not(.add-empty)").forEach(b => {
+    b.addEventListener("click", () => {
+      const inp = b.previousElementSibling;
+      const ac = b.parentElement.querySelector(".ac");
+      const active = ac.querySelector(".ac-item.active");
+      if (active) assignToTable(b.dataset.id, active.dataset.name);
+      else if (inp.value.trim()) assignToTable(b.dataset.id, inp.value.trim());
+    });
+  });
+  document.querySelectorAll(".add-empty").forEach(b => {
+    b.addEventListener("click", () => { getTable(b.dataset.id).guests.push(EMPTY_SEAT); render(); });
+  });
+  document.querySelectorAll(".guest .x").forEach(x => {
+    x.addEventListener("click", e => {
+      e.stopPropagation();
+      getTable(x.dataset.id).guests.splice(+x.dataset.idx, 1);
+      render();
+    });
+  });
+  document.querySelectorAll(".gname").forEach(n => {
+    n.addEventListener("dblclick", () => { n.contentEditable = "true"; n.focus(); });
+    n.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); n.blur(); } });
+    n.addEventListener("blur", () => { n.contentEditable = "false"; renameGuest(n.dataset.id, +n.dataset.idx, n.textContent); });
+  });
+  document.querySelectorAll(".table-num").forEach(num => {
+    num.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); num.blur(); } });
+    num.addEventListener("blur", () => { getTable(num.dataset.id).num = num.textContent.trim() || "?"; saveDB(); });
+  });
+  document.querySelectorAll(".cap").forEach(cap => {
+    cap.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); cap.blur(); } });
+    cap.addEventListener("blur", () => {
+      const v = parseInt(cap.textContent.replace(/\D/g,"")) || 0;
+      getTable(cap.dataset.id).cap = v;
+      render();
+    });
+  });
+  document.querySelectorAll(".menu-badge").forEach(m => {
+    m.addEventListener("click", e => {
+      e.stopPropagation();
+      const p = P();
+      const nn = normName(m.dataset.name);
+      const next = MENU_CYCLE[p.menus[nn]];
+      if (next === undefined) delete p.menus[nn]; else p.menus[nn] = next;
+      render();
+    });
+  });
+  document.querySelectorAll(".orient").forEach(o => {
+    o.addEventListener("click", e => {
+      e.stopPropagation();
+      const t = getTable(o.dataset.id);
+      t.shape = nextShape(t.shape);
+      render();
+    });
+  });
+  document.querySelectorAll(".del-table").forEach(d => {
+    d.addEventListener("click", () => {
+      const t = getTable(d.dataset.id);
+      if (confirm(`Delete table ${t.num}` + (t.guests.length ? ` (with ${t.guests.filter(g=>g!==EMPTY_SEAT).length} guests)` : "") + "?")) {
+        P().tables = P().tables.filter(x => x._id != d.dataset.id);
+        render();
+      }
+    });
+  });
+  attachDnD();
+}
+
+function attachDnD() {
+  document.querySelectorAll(".guest").forEach(g => {
+    g.addEventListener("click", e => {
+      if (e.target.closest(".x") || e.target.closest(".menu-badge")) return;
+      if (e.target.isContentEditable) return;
+      e.stopPropagation();
+      if (!picked) { startPick(g); return; }
+      if (picked.id === g.dataset.id && picked.idx === +g.dataset.idx) { cancelPick(); return; }
+      placeGuest(picked, g.dataset.id, +g.dataset.idx);
+    });
+    g.addEventListener("dragstart", e => {
+      dragSrc = { id: g.dataset.id, idx: +g.dataset.idx };
+      g.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", "");
+    });
+    g.addEventListener("dragend", () => { g.classList.remove("dragging"); clearCues(); });
+    g.addEventListener("dragover", e => {
+      e.preventDefault(); e.stopPropagation();
+      const r = g.getBoundingClientRect();
+      const after = e.clientX > r.left + r.width / 2;
+      clearCues();
+      g.classList.add(after ? "drop-after" : "drop-before");
+    });
+    g.addEventListener("dragleave", () => g.classList.remove("drop-before", "drop-after"));
+    g.addEventListener("drop", e => {
+      e.preventDefault(); e.stopPropagation();
+      if (!dragSrc) return;
+      if (getTable(g.dataset.id).guests[+g.dataset.idx] === EMPTY_SEAT) { placeGuest(dragSrc, g.dataset.id, +g.dataset.idx); return; }
+      const r = g.getBoundingClientRect();
+      const after = e.clientX > r.left + r.width / 2;
+      moveGuest(dragSrc, g.dataset.id, +g.dataset.idx + (after ? 1 : 0));
+    });
+  });
+  document.querySelectorAll(".table").forEach(t => {
+    // drag body to move · click to select (or to seat the picked guest)
+    t.addEventListener("pointerdown", e => {
+      if (e.target.closest(".guest") || e.target.closest(".tbar") || e.target.isContentEditable ||
+          e.target.closest(".table-num") || e.target.closest(".cap")) return;
+      const tt = getTable(t.dataset.id);
+      const sx = e.clientX, sy = e.clientY, ox = tt.x, oy = tt.y;
+      let dragged = false;
+      t.setPointerCapture(e.pointerId);
+      const move = ev => {
+        const dx = ev.clientX - sx, dy = ev.clientY - sy;
+        if (!dragged && Math.hypot(dx, dy) < 5) return;
+        dragged = true;
+        tt.x = Math.max(0, ox + dx / zoom);
+        tt.y = Math.max(0, oy + dy / zoom);
+        t.style.left = tt.x + "px"; t.style.top = tt.y + "px";
+        const bar = document.getElementById("tbar");
+        if (bar && String(selectedTable) === String(tt._id)) positionToolbar(bar, tt);
+      };
+      const up = () => {
+        t.removeEventListener("pointermove", move);
+        t.removeEventListener("pointerup", up);
+        if (dragged) { saveDB(); return; }
+        if (picked) { moveGuest(picked, t.dataset.id, null); return; }
+        selectTable(t.dataset.id);
+      };
+      t.addEventListener("pointermove", move);
+      t.addEventListener("pointerup", up);
+    });
+    t.addEventListener("dragover", e => { e.preventDefault(); t.classList.add("over"); });
+    t.addEventListener("dragleave", () => t.classList.remove("over"));
+    t.addEventListener("drop", e => {
+      e.preventDefault();
+      t.classList.remove("over");
+      if (!dragSrc) return;
+      moveGuest(dragSrc, t.dataset.id, null);
+    });
+  });
+}
+
+// ================= File save / load / export =================
+function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"") || "event"; }
+function saveFile() {
+  closeMenus();
+  const p = P();
+  const blob = new Blob([JSON.stringify({ app: "seatmap", name: p.name, tables: p.tables, zones: p.zones, master: p.master, menus: p.menus, edited: p.edited, snapshots: p.snapshots, rules: p.rules || [] }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = slug(p.name) + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function loadFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const p = P();
+      if (Array.isArray(data)) { p.tables = data; }
+      else if (data && Array.isArray(data.tables)) {
+        p.tables = data.tables;
+        p.tables.forEach(t => { if (t.wide && !t.shape) t.shape = "h"; delete t.wide; });
+        if (Array.isArray(data.zones)) p.zones = data.zones;
+        if (Array.isArray(data.master)) p.master = data.master;
+        if (data.menus && typeof data.menus === "object") p.menus = data.menus;
+        if (Array.isArray(data.edited)) p.edited = data.edited;
+        if (Array.isArray(data.snapshots)) p.snapshots = data.snapshots;
+        if (Array.isArray(data.rules)) p.rules = data.rules;
+        if (data.name) p.name = data.name;
+      } else throw new Error("format");
+      p.tables.forEach(t => { if (!t._id) t._id = nextUid(); });
+      p.nextUid = Math.max(p.nextUid||0, ...p.tables.map(t => t._id||0)) + 1;
+      renderAll();
+      alert("Loaded ✓");
+    } catch (err) {
+      alert("Invalid file — couldn’t load it.");
+    }
+  };
+  reader.readAsText(file);
+  input.value = "";
+}
+function exportList() {
+  closeMenus();
+  const p = P();
+  let out = p.name + "\n\n";
+  const sorted = [...p.tables].sort((a,b)=>(parseInt(a.num)||999)-(parseInt(b.num)||999));
+  for (const t of sorted) {
+    const real = t.guests.filter(g => g !== EMPTY_SEAT);
+    out += `Table ${t.num} (${real.length}/${t.cap}):\n`;
+    t.guests.forEach(g => {
+      if (g === EMPTY_SEAT) { out += `  - (empty seat)\n`; return; }
+      const m = p.menus[normName(g)];
+      out += `  - ${g}${m ? " · " + (m === "veg" ? "VEGETARIAN" : m === "vegfish" ? "VEG+FISH" : "ALLERGY") : ""}\n`;
+    });
+    out += "\n";
+  }
+  navigator.clipboard.writeText(out).then(
+    () => alert("List copied to clipboard!"),
+    () => prompt("Copy the list:", out)
+  );
+}
+
+// ================= Zoom (canvas only) =================
+let zoom = parseFloat(localStorage.getItem("seatmap_zoom")) || 1;
+function setZoom(z, focalX, focalY) {
+  z = Math.min(2, Math.max(0.4, Math.round(z * 20) / 20));
+  const wrap = document.querySelector(".board-wrap");
+  const rect = wrap.getBoundingClientRect();
+  const fx = (focalX !== undefined ? focalX : rect.left + rect.width / 2) - rect.left;
+  const fy = (focalY !== undefined ? focalY : rect.top + rect.height / 2) - rect.top;
+  const bx = (wrap.scrollLeft + fx) / zoom;
+  const by = (wrap.scrollTop + fy) / zoom;
+  zoom = z;
+  board.style.zoom = zoom;
+  wrap.scrollLeft = bx * zoom - fx;
+  wrap.scrollTop = by * zoom - fy;
+  document.getElementById("zoomPct").textContent = Math.round(zoom * 100) + "%";
+  localStorage.setItem("seatmap_zoom", zoom);
+}
+document.querySelector(".board-wrap").addEventListener("wheel", e => {
+  if (!e.ctrlKey && !e.metaKey) return;      // pinch on trackpads arrives as ctrl+wheel
+  e.preventDefault();
+  setZoom(zoom * (e.deltaY < 0 ? 1.08 : 0.93), e.clientX, e.clientY);
+}, { passive: false });
+
+// ================= Boot =================
+function centerBoard() {
+  const wrap = document.querySelector(".board-wrap");
+  wrap.scrollLeft = Math.max(0, (wrap.scrollWidth - wrap.clientWidth) / 2);
+  wrap.scrollTop = 0;
+}
+renderAll();
+board.style.zoom = zoom;
+document.getElementById("zoomPct").textContent = Math.round(zoom * 100) + "%";
+centerBoard();
+initCloud();
+if (!db.onboarded && P().tables.length === 0 && P().zones.length === 0) openTemplates();
+</script>
+</body>
+</html>
