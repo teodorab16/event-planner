@@ -623,23 +623,6 @@
     background: var(--olive-soft); border-radius: 99px; padding: 2px 7px; white-space: nowrap;
   }
 
-  /* seating rules */
-  .rule-add { display: flex; gap: 4px; margin-bottom: 8px; }
-  .rule-add input { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 12px; outline: none; font-family: inherit; }
-  .rule-add select { border: 1px solid var(--border); border-radius: 8px; font-size: 11px; font-family: inherit; background: var(--surface); }
-  .rule-add button { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; cursor: pointer; padding: 4px 9px; }
-  .rule-row {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; padding: 5px 7px; border-radius: 7px; margin-bottom: 3px;
-  }
-  .rule-row .rule-txt { flex: 1; overflow-wrap: anywhere; }
-  .rule-row.ok { background: var(--green-soft); color: var(--green); }
-  .rule-row.bad { background: var(--red-soft); color: var(--red); font-weight: 700; }
-  .rule-row.pending { background: var(--olive-soft); color: var(--muted); }
-  .r-alert {
-    background: var(--red-soft); color: var(--red); font-weight: 800; font-size: 12px;
-    border-radius: 9px; padding: 7px 10px; margin-bottom: 8px; text-align: center;
-  }
 
   /* zoom control */
   .zoom-ctl {
@@ -1607,33 +1590,7 @@ function renderRoster() {
       extras.map(([g,tn]) => `<div class="r-item extra" data-name="${escapeHtml(g)}"><span class="r-dot"></span><span class="r-name">${escapeHtml(g)}</span><span class="r-where">t${escapeHtml(tn)}</span></div>`).join("");
   }
 
-  // seating rules (keep together / keep apart)
-  let broken = 0;
-  const ruleRows = p.rules.map((r, i) => {
-    const ta = whereMap.get(normName(r.a)), tb = whereMap.get(normName(r.b));
-    let st = "pending", icon = "·";
-    if (ta && tb) {
-      const same = String(ta) === String(tb);
-      const ok = r.type === "together" ? same : !same;
-      st = ok ? "ok" : "bad"; icon = ok ? "✓" : "✕";
-      if (!ok) broken++;
-    }
-    return `<div class="rule-row ${st}">
-      <span class="rule-txt">${escapeHtml(r.a)} ${r.type === "together" ? icon("heart") : icon("zap")} ${escapeHtml(r.b)}</span>
-      <span>${icon}</span>
-      <span class="r-x" style="visibility:visible" onclick="removeRule(${i})" title="Remove rule">×</span></div>`;
-  }).join("");
-  const rulesHtml = `
-    <div class="r-section">Seating rules</div>
-    ${broken ? `<div class="r-alert">${icon("alert")} ${broken} rule${broken > 1 ? "s" : ""} broken</div>` : ""}
-    <div class="rule-add">
-      <input list="masterDL" id="ruleA" placeholder="name">
-      <select id="ruleType"><option value="together">together</option><option value="apart">apart</option></select>
-      <input list="masterDL" id="ruleB" placeholder="name">
-      <button onclick="addRule()" title="Add rule">+</button>
-    </div>
-    ${ruleRows || '<div class="r-sub">e.g. grandma + grandpa must share a table; uncle + ex-wife must not.</div>'}
-    <datalist id="masterDL">${p.master.map(n => `<option value="${escapeHtml(n)}">`).join("")}</datalist>`;
+
 
   const tb = document.getElementById("rosterTabBadge");
   tb.textContent = unassigned || "";
@@ -1652,7 +1609,6 @@ function renderRoster() {
     <button class="r-toggle" onclick="openBulk()">${icon("clipboard")} Paste a whole list…</button>
     <div class="r-list">${listHtml || '<div class="empty-note">Add guests here, or directly at a table.</div>'}</div>
     ${extraHtml}
-    ${rulesHtml}
     </div>`;
 
   if (rosterQuery) filterRoster(rosterQuery);
@@ -1665,17 +1621,6 @@ document.getElementById("roster").addEventListener("click", e => {
   if (it && it.dataset.name) locateGuest(it.dataset.name);
 });
 
-// ============ rules ============
-function addRule() {
-  const p = P(); p.rules = p.rules || [];
-  const a = document.getElementById("ruleA").value.trim();
-  const b = document.getElementById("ruleB").value.trim();
-  const type = document.getElementById("ruleType").value;
-  if (!a || !b || normName(a) === normName(b)) { alert("Pick two different guests."); return; }
-  p.rules.push({ a, b, type });
-  saveDB(); renderRoster();
-}
-function removeRule(i) { P().rules.splice(i, 1); saveDB(); renderRoster(); }
 
 // ============ bulk paste ============
 function openBulk() { document.getElementById("bulkOverlay").classList.add("show"); document.getElementById("bulkText").focus(); }
