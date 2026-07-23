@@ -88,10 +88,50 @@
   }
   .btn.new-event:hover { background: #cc5271; }
   .btn.new-event .ic { width: 16px; height: 16px; }
-  .proj-select {
-    border: 1px solid transparent;
-    background: transparent;
-    appearance: none;
+  .proj-btn {
+    border: none; background: transparent;
+    font-family: var(--script);
+    font-size: 22px; font-weight: 700;
+    color: var(--accent);
+    padding: 4px 10px; border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    max-width: 300px; white-space: nowrap;
+  }
+  .proj-btn span { overflow: hidden; text-overflow: ellipsis; }
+  .proj-btn:hover { background: var(--accent-soft); }
+  .proj-btn .ic { width: 14px; height: 14px; color: var(--faint); }
+  .proj-menu {
+    position: fixed; top: 60px; left: 200px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    min-width: 260px;
+    padding: 6px;
+    display: none;
+    z-index: 200;
+  }
+  .proj-menu.show { display: block; }
+  .pm-row {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 10px; border-radius: 9px; cursor: pointer;
+  }
+  .pm-row:hover { background: var(--accent-soft); }
+  .pm-check { width: 16px; flex: 0 0 16px; color: var(--accent); font-weight: 800; text-align: center; }
+  .pm-body { flex: 1; min-width: 0; }
+  .pm-name { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pm-meta { font-size: 11px; color: var(--faint); }
+  .pm-act { display: none; gap: 2px; }
+  .pm-row:hover .pm-act { display: flex; }
+  .pm-act button {
+    border: none; background: none; cursor: pointer; padding: 4px;
+    border-radius: 6px; color: var(--faint);
+  }
+  .pm-act button:hover { background: #fff; color: var(--text); }
+  .pm-act button.del:hover { color: var(--red); }
+  .pm-act .ic { width: 13px; height: 13px; }
+  .proj-select-legacy {
     -webkit-appearance: none;
     background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b3a893' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -706,7 +746,11 @@
 <div class="topbar">
   <div class="logo"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22h8"/><path d="M7 10h10"/><path d="M12 15v7"/><path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z"/></svg></div>
   <button class="btn new-event" onclick="newEvent()" title="Start a new event"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> New event</button>
-  <select class="proj-select" id="projSelect" onchange="switchProject(this.value)" title="Switch event"></select>
+  <button class="proj-btn" id="projBtn" onclick="toggleProjMenu(event)" title="Switch event">
+    <span id="projName"></span>
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+  <div class="proj-menu" id="projMenu"></div>
   <span class="sync-pill" id="syncPill"><span class="dot"></span><span id="syncText">local</span></span>
   <span class="spacer"></span>
   <button class="btn ghost" onclick="toggleDrawer()">
@@ -1123,10 +1167,52 @@ const MENU_CYCLE = { undefined: "veg", veg: "vegfish", vegfish: "allergy", aller
 
 // ================= Projects UI =================
 function renderProjects() {
-  const sel = document.getElementById("projSelect");
-  sel.innerHTML = Object.entries(db.projects)
-    .map(([id,p]) => `<option value="${id}" ${id===db.current?"selected":""}>${escapeHtml(p.name)}</option>`)
-    .join("");
+  document.getElementById("projName").textContent = P().name;
+  const menu = document.getElementById("projMenu");
+  menu.innerHTML = Object.entries(db.projects).map(([id, p]) => {
+    const seated = p.tables.flatMap(t => t.guests).filter(g => g !== EMPTY_SEAT).length;
+    return `<div class="pm-row" data-id="${id}">
+      <span class="pm-check">${id === db.current ? "✓" : ""}</span>
+      <span class="pm-body">
+        <div class="pm-name">${escapeHtml(p.name)}</div>
+        <div class="pm-meta">${p.tables.length} table${p.tables.length === 1 ? "" : "s"} · ${seated} guest${seated === 1 ? "" : "s"}</div>
+      </span>
+      <span class="pm-act">
+        <button title="Rename" onclick="event.stopPropagation(); renameProjectById('${id}')">${icon("pencil")}</button>
+        <button class="del" title="Delete" onclick="event.stopPropagation(); deleteProjectById('${id}')">${icon("trash")}</button>
+      </span>
+    </div>`;
+  }).join("");
+  menu.querySelectorAll(".pm-row").forEach(r => {
+    r.addEventListener("click", () => { closeProjMenu(); switchProject(r.dataset.id); });
+  });
+}
+function toggleProjMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById("projMenu");
+  const btn = document.getElementById("projBtn");
+  const r = btn.getBoundingClientRect();
+  menu.style.left = Math.max(8, r.left) + "px";
+  menu.style.top = (r.bottom + 6) + "px";
+  menu.classList.toggle("show");
+}
+function closeProjMenu() { document.getElementById("projMenu").classList.remove("show"); }
+document.addEventListener("click", e => { if (!e.target.closest("#projMenu") && !e.target.closest("#projBtn")) closeProjMenu(); });
+function renameProjectById(id) {
+  const name = prompt("Event name:", db.projects[id].name);
+  if (name && name.trim()) { db.projects[id].name = name.trim(); saveDB(); renderProjects(); }
+}
+async function deleteProjectById(id) {
+  const pr = db.projects[id];
+  if (!confirm(`Delete “${pr.name}” with all its tables, guests and versions?`)) return;
+  delete db.projects[id];
+  if (sb) { try { await sb.from("events").delete().eq("id", id); } catch(e){} }
+  if (Object.keys(db.projects).length === 0) {
+    const nid = newId();
+    db.projects[nid] = emptyProject("Untitled event");
+  }
+  if (!db.projects[db.current]) db.current = Object.keys(db.projects)[0];
+  resetHistory(); saveDB(); renderAll();
 }
 function newEvent() {
   const nid = newId();
@@ -1139,24 +1225,8 @@ function switchProject(id) {
   db.current = id;
   cancelPick(); resetHistory(); saveDB(); renderAll();
 }
-function renameProject() {
-  closeMenus();
-  const name = prompt("Event name:", P().name);
-  if (name && name.trim()) { P().name = name.trim(); saveDB(); renderProjects(); }
-}
-async function deleteProject() {
-  closeMenus();
-  if (!confirm(`Delete “${P().name}” with all its tables, guests and versions?`)) return;
-  const deadId = db.current;
-  delete db.projects[deadId];
-  if (sb) { try { await sb.from("events").delete().eq("id", deadId); } catch(e){} }
-  if (Object.keys(db.projects).length === 0) {
-    const id = newId();
-    db.projects[id] = emptyProject("My event");
-  }
-  db.current = Object.keys(db.projects)[0];
-  resetHistory(); saveDB(); renderAll();
-}
+function renameProject() { closeMenus(); renameProjectById(db.current); }
+function deleteProject() { closeMenus(); deleteProjectById(db.current); }
 
 // ================= Snapshots (fazele intermediare) =================
 function toggleDrawer() {
