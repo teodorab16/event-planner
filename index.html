@@ -792,11 +792,15 @@
 
   /* print */
   #printArea { display: none; }
+  .p-map { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 16px; background: #fff; }
+  .p-map-inner { transform-origin: top left; }
   @media print {
-    .topbar, .layout, .move-banner, .drawer, .overlay { display: none !important; }
+    @page { size: A4 landscape; margin: 10mm; }
+    .topbar, .layout, .move-banner, .drawer, .overlay, .roster-tab, .zoom-ctl, .credit, .sample-banner { display: none !important; }
+    .p-map { break-after: page; page-break-after: always; }
     #printArea { display: block; font-family: Nunito, sans-serif; color: #000; padding: 10px; }
     #printArea h1 { font-family: var(--script); font-size: 34px; margin: 0 0 14px; }
-    .p-grid { column-count: 2; column-gap: 24px; }
+    .p-grid { column-count: 3; column-gap: 24px; }
     .p-table { break-inside: avoid; margin-bottom: 16px; }
     .p-table h3 { margin: 0 0 4px; font-size: 15px; }
     .p-table small { color: #777; font-weight: 400; }
@@ -1905,7 +1909,31 @@ function buildPrintHtml() {
   html += `</div>`;
   const unseated = p.master.filter(n => !whereSeated(n));
   if (unseated.length) html += `<h3>Not seated yet (${unseated.length})</h3><p>${unseated.map(escapeHtml).join(", ")}</p>`;
-  document.getElementById("printArea").innerHTML = html;
+  const pa = document.getElementById("printArea");
+  pa.innerHTML = html;
+
+  // page 1: the floor plan exactly as drawn, scaled to fit one landscape page
+  const clone = board.cloneNode(true);
+  clone.id = "printBoard";
+  clone.style.zoom = "1";
+  clone.querySelectorAll("#tbar, .ac, .guest.picked").forEach(n => n.classList ? n.classList.remove("picked") : null);
+  const tb = clone.querySelector("#tbar"); if (tb) tb.remove();
+  const bw = parseInt(board.style.width) || board.scrollWidth || 1700;
+  const bh = parseInt(board.style.height) || board.scrollHeight || 1300;
+  const scale = Math.min(1000 / bw, 640 / bh);
+  const wrap = document.createElement("div");
+  wrap.className = "p-map";
+  wrap.style.width = Math.round(bw * scale) + "px";
+  wrap.style.height = Math.round(bh * scale) + "px";
+  const inner = document.createElement("div");
+  inner.className = "p-map-inner";
+  inner.style.transform = "scale(" + scale + ")";
+  inner.style.width = bw + "px";
+  inner.style.height = bh + "px";
+  inner.appendChild(clone);
+  wrap.appendChild(inner);
+  const h1 = pa.querySelector("h1");
+  if (h1) h1.after(wrap); else pa.prepend(wrap);
   return html;
 }
 function printView() {
