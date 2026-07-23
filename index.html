@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script>
 (function () {
-  var HASH = "5b3d3eb466b8f351fec4c479adfe7f5fd6d27f78a89c997b73fa319307a04665";
+  var HASH = "84c45b50e7d1ace3ec2b81ea873cc93bb242510b1497f6b81d68b5213ce41c45";
   var ok = false;
   try { ok = localStorage.getItem("bd_access") === HASH; } catch (e) {}
   if (!ok) document.documentElement.className += " locked";
@@ -808,7 +808,7 @@
 <script>
 async function bdUnlock() {
   var v = document.getElementById("lockCode").value.trim().toUpperCase();
-  var b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v));
+  var b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v + "|verify"));
   var h = Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, "0"); }).join("");
   if (h === window.__BD_HASH) {
     try { localStorage.setItem("bd_access", window.__BD_HASH); } catch (e) {}
